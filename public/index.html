@@ -1111,7 +1111,7 @@
       <div style="background: rgba(59,130,246,0.08); border: 1px solid rgba(59,130,246,0.25); border-radius: 10px; padding: 0.8rem; margin-bottom: 1.2rem; font-size: 0.78rem; line-height: 1.45;">
         <strong style="color: var(--blue-main); display: block; margin-bottom: 0.25rem;">📌 Functionality &amp; Use:</strong>
         <span>
-          Show this QR code at the <strong>SAO Security Desk</strong> or to the custodian. When scanned, it instantly loads the side-by-side reconciliation record to verify ownership (matching location, category, and private verification hints) before item handover is authorized.
+          When scanned, this QR code loads the side-by-side reconciliation record to verify ownership (matching location, category, and private verification hints) before item handover is authorized.
         </span>
       </div>
 
@@ -1138,7 +1138,7 @@
         <div style="display: inline-block; padding: 0.5rem; background: #ffffff; border: 1.5px solid #0f172a; border-radius: 8px; margin-bottom: 0.5rem;">
           <img id="matchQrImage" src="" alt="Match Verification QR" style="width: 130px; height: 130px; display: block;" />
         </div>
-        <div style="font-size: 0.75rem; font-weight: 800; color: #0f172a; text-transform: uppercase;">Scan at SAO Desk to Authorize Handover</div>
+        <div style="font-size: 0.75rem; font-weight: 800; color: #0f172a; text-transform: uppercase;">Scan to Authorize Handover</div>
       </div>
 
       <div class="no-print" style="display: flex; gap: 0.65rem; justify-content: flex-end;">
@@ -1685,8 +1685,10 @@
           fetch(`/api/items/${lostId}`).then(r => r.json()),
           fetch(`/api/items/${foundId}`).then(r => r.json())
         ]);
-        const lost  = r1.item || {};
-        const found = r2.item || {};
+        const first = r1.item || {};
+        const second = r2.item || {};
+        const lost = first.type === 'lost' ? first : second;
+        const found = first.type === 'found' ? first : second;
 
         document.getElementById('matchLostTitle').textContent  = lost.title  || '—';
         document.getElementById('matchFoundTitle').textContent = found.title || '—';
@@ -1694,7 +1696,7 @@
         document.getElementById('matchFoundRef').textContent   = found.refCode || '—';
 
         const matchPayload = encodeURIComponent(
-          `CSPC Match | Lost: ${lost.refCode} | Found: ${found.refCode} | Verify at SASO`
+          `CSPC Match | Lost: ${lost.refCode} | Found: ${found.refCode} | Verify ownership before handover`
         );
         document.getElementById('matchQrImage').src =
           `https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=${matchPayload}`;
