@@ -223,6 +223,13 @@
     }
     .del-modal h3 { font-size:1rem; font-weight:800; color:#f87171; margin-bottom:.6rem; }
     .del-modal p  { font-size:.85rem; color:var(--text-muted); margin-bottom:1.5rem; line-height:1.6; }
+    [data-theme='light'] .del-modal {
+      background: #ffffff;
+      border: 1px solid rgba(239,68,68,.3);
+      box-shadow: 0 10px 40px rgba(0,0,0,0.15);
+    }
+    [data-theme='light'] .del-modal h3 { color: #dc2626; }
+    [data-theme='light'] .del-modal p  { color: #475569; }
 
     @media (max-width: 600px) {
       th, td { padding: .6rem .65rem; font-size: .78rem; }
