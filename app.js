@@ -594,6 +594,8 @@ function injectSharedStyles() {
     .page-header h1 {
       font-size: clamp(1.6rem, 4vw, 2.4rem);
       font-weight: 900;
+      line-height: 1.25;
+      padding-bottom: 0.15em;
       background: linear-gradient(90deg, #ffffff 40%, #3b82f6 100%);
       -webkit-background-clip: text;
       -webkit-text-fill-color: transparent;
@@ -644,13 +646,17 @@ function injectSharedStyles() {
       font-weight: 700 !important;
     }
     [data-theme='light'] .form-control {
-      background: #ffffff;
-      border-color: rgba(37,99,235,0.25);
-      color: #0f172a;
+      background: #ffffff !important;
+      border-color: rgba(37,99,235,0.3) !important;
+      color: #0f172a !important;
+    }
+    [data-theme='light'] .form-control::placeholder {
+      color: #64748b !important;
+      opacity: 1;
     }
     [data-theme='light'] select.form-control option {
-      background: #ffffff;
-      color: #0f172a;
+      background: #ffffff !important;
+      color: #0f172a !important;
     }
     [data-theme='light'] .stat-card {
       background: #ffffff;
