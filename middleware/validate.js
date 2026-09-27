@@ -92,8 +92,26 @@ function validateUserAuth(req, res, next) {
     }
   }
 
-  if (!password || password.length < 6) {
+  if (req.path !== '/register' && (!password || password.length < 6)) {
     errors.push('Password must be at least 6 characters long.');
+  }
+
+  if (req.path === '/register') {
+    if (!password || password.length < 8) {
+      errors.push('Password must be at least 8 characters long.');
+    }
+    if (!/[A-Z]/.test(password || '')) {
+      errors.push('Password must contain one uppercase letter (A-Z).');
+    }
+    if (!/[a-z]/.test(password || '')) {
+      errors.push('Password must contain one lowercase letter (a-z).');
+    }
+    if (!/[0-9]/.test(password || '')) {
+      errors.push('Password must contain one number (0-9).');
+    }
+    if (!/[!@#$%?&*]/.test(password || '')) {
+      errors.push('Password must contain one special symbol (!, @, #, $, %, ?, &, *).');
+    }
   }
 
   if (errors.length > 0) {
