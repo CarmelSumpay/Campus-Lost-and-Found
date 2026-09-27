@@ -14,52 +14,7 @@
     })();
   </script>
   <style>
-    /* ── PIN Gate ── */
-    .pin-gate {
-      min-height: calc(100vh - 60px);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      padding: 2rem;
-      position: relative;
-      z-index: 1;
-    }
-    .pin-card {
-      background: var(--card-bg);
-      border: 1px solid var(--border);
-      border-radius: 20px;
-      padding: 2.5rem;
-      max-width: 380px;
-      width: 100%;
-      text-align: center;
-    }
-    .pin-icon { font-size: 3rem; margin-bottom: 1rem; }
-    .pin-card h2 {
-      font-size: 1.2rem;
-      font-weight: 900;
-      color: var(--text-main);
-      text-transform: none;
-      letter-spacing: 0;
-      margin-bottom: 0.4rem;
-    }
-    .pin-card p { font-size: .85rem; color: var(--text-muted); margin-bottom: 1.5rem; }
-    .pin-input {
-      font-size: 1.8rem;
-      letter-spacing: .6rem;
-      text-align: center;
-      font-weight: 900;
-      width: 100%;
-    }
-    .pin-error {
-      color: #f87171;
-      font-size: .8rem;
-      margin-top: .5rem;
-      display: none;
-    }
-
     /* ── Admin Panel ── */
-    #adminPanel { display: none; }
-
     .admin-tabs {
       display: flex;
       gap: .5rem;
@@ -239,24 +194,6 @@
 <body>
   <div id="navMount"></div>
 
-  <!-- PIN Gate -->
-  <div class="pin-gate" id="pinGate">
-    <div class="pin-card">
-      <div class="pin-icon">🛡️</div>
-      <h2>Admin Access</h2>
-      <p>Enter the 4-digit PIN to access the admin panel.</p>
-      <div class="form-group" style="position:relative;">
-        <input type="password" class="form-control pin-input" id="pinInput"
-          maxlength="4" placeholder="••••" inputmode="numeric" pattern="[0-9]*" style="padding-right:3.5rem;" />
-        <button type="button" id="pinToggleBtn" onclick="togglePinVisibility()" style="position:absolute;right:10px;top:50%;transform:translateY(-50%);background:rgba(59,130,246,0.12);border:1px solid rgba(59,130,246,0.3);color:var(--blue-main);border-radius:6px;padding:0.2rem 0.5rem;font-size:0.7rem;font-weight:700;cursor:pointer;">Show</button>
-        <div class="pin-error" id="pinError">Incorrect PIN. Please try again.</div>
-      </div>
-      <button class="btn btn-primary" id="pinSubmit" style="width:100%;margin-top:1rem;">Enter</button>
-      <p style="font-size:.72rem;color:var(--text-muted);margin-top:1rem;">Default PIN: 1234</p>
-    </div>
-  </div>
-
-  <!-- Admin Panel (hidden until PIN correct) -->
   <div id="adminPanel">
     <div class="page-header">
       <h1>🛡️ Admin Panel</h1>
@@ -359,42 +296,7 @@
     document.addEventListener('DOMContentLoaded', () => {
       document.getElementById('navMount').innerHTML = renderNav('admin.html');
       initNav();
-
-      // PIN logic
-      const pinInput  = document.getElementById('pinInput');
-      const pinSubmit = document.getElementById('pinSubmit');
-      const pinError  = document.getElementById('pinError');
-
-      function tryPin() {
-        if (pinInput.value === ADMIN_PIN) {
-          document.getElementById('pinGate').style.display = 'none';
-          document.getElementById('adminPanel').style.display = 'block';
-          renderAdminPanel();
-        } else {
-          pinError.style.display = 'block';
-          pinInput.value = '';
-          pinInput.focus();
-        }
-      }
-
-      pinSubmit.addEventListener('click', tryPin);
-      pinInput.addEventListener('keydown', e => { if (e.key === 'Enter') tryPin(); });
-      pinInput.addEventListener('input',   () => { pinError.style.display = 'none'; });
-
-      function togglePinVisibility() {
-      const input = document.getElementById('pinInput');
-      const btn = document.getElementById('pinToggleBtn');
-      if (!input) return;
-      if (input.type === 'password') {
-        input.type = 'text';
-        btn.innerText = 'Hide';
-        btn.style.color = '#fca5a5';
-      } else {
-        input.type = 'password';
-        btn.innerText = 'Show';
-        btn.style.color = 'var(--blue-main)';
-      }
-    }
+      renderAdminPanel();
 
     // Tabs
       document.querySelectorAll('.admin-tab').forEach(tab => {

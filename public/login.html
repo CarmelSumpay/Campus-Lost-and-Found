@@ -223,7 +223,7 @@
 
         <div class="demo-creds">
           <strong>Demo Accounts Available:</strong><br />
-          Admin / SAO: <code>admin@cspc.edu.ph</code> (Password: <code>AdminPassword123!</code>)<br />
+          Admin / SAO: <code>admin@cspc.edu.ph</code><br />
           Student: <code>student@my.cspc.edu.ph</code> (Password: <code>StudentPassword123!</code>)
         </div>
       </form>
@@ -388,7 +388,7 @@
 
         const data = await res.json();
         if (data.success) {
-          window.location.href = '/';
+          window.location.href = data.user.role === 'admin' ? '/admin.html' : '/';
         } else {
           showError(data.message || 'Login failed. Please check your credentials.');
         }
