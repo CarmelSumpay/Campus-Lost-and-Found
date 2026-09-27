@@ -1132,3 +1132,37 @@ select option {
   border-color: #2563eb;
   background: rgba(37, 99, 235, 0.04);
 }
+
+.items-pagination {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+  margin-top: 1.5rem;
+}
+
+.pagination-btn {
+  min-width: 2.25rem;
+  height: 2.25rem;
+  padding: 0 0.7rem;
+  border: 1px solid rgba(59, 130, 246, 0.35);
+  border-radius: 7px;
+  background: transparent;
+  color: var(--text-muted);
+  font-size: 0.78rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.pagination-btn:hover:not(:disabled),
+.pagination-btn.active {
+  background: var(--blue-main);
+  border-color: var(--blue-main);
+  color: #ffffff;
+}
+
+.pagination-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}

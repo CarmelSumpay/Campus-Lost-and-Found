@@ -618,6 +618,7 @@
     <div class="projects-grid" id="itemsGrid">
       <!-- Generated via JS -->
     </div>
+    <div class="items-pagination" id="itemsPagination" aria-label="Items pagination"></div>
   </section>
 
   <hr class="section-divider" />
@@ -985,9 +986,9 @@
       <p style="font-size: 0.84rem; color: var(--text-muted); line-height: 1.5; margin-bottom: 1.25rem;">
         Belonging Registration is a <strong>preventive feature</strong> available exclusively to authenticated CSPC students and staff. This guarantees that <strong>only you have access</strong> to your registered belongings and notification alerts.
       </p>
-      <div style="display: flex; gap: 0.75rem; justify-content: center;">
-        <button type="button" class="btn btn-outline" onclick="closeAuthRequiredModal()">Cancel</button>
-        <button type="button" class="btn btn-primary" onclick="closeAuthRequiredModal(); document.getElementById('registerBelongingModal').classList.add('open');" style="padding: 0.5rem 1.25rem;">Continue (Demo Mode)</button>
+      <div style="display: flex; gap: 0.75rem; justify-content: center; align-items: stretch;">
+        <button type="button" class="btn btn-outline" onclick="closeAuthRequiredModal()" style="height: 3.25rem; flex: 1; display: inline-flex; align-items: center; justify-content: center; text-align: center;">Cancel</button>
+        <button type="button" class="btn btn-primary" onclick="closeAuthRequiredModal(); document.getElementById('registerBelongingModal').classList.add('open');" style="height: 3.25rem; flex: 1; display: inline-flex; align-items: center; justify-content: center; text-align: center; padding: 0.7rem 1.5rem;">Continue (Demo Mode)</button>
       </div>
     </div>
   </div>
@@ -1204,6 +1205,8 @@
 
     let currentFilter = 'all';
     let currentLocationFilter = '';
+    let currentPage = 1;
+    const itemsPerPage = 6;
 
     function getItems() {
       const saved = localStorage.getItem(STORAGE_KEY);
@@ -1241,6 +1244,7 @@
 
     function setFilter(filter, el) {
       currentFilter = filter;
+      currentPage = 1;
       document.querySelectorAll('.filter-chips .chip').forEach(c => c.classList.remove('active'));
       el.classList.add('active');
       renderItems();
@@ -1248,6 +1252,7 @@
 
     function setLocationFilter(loc, el) {
       currentLocationFilter = loc.toLowerCase();
+      currentPage = 1;
       document.querySelectorAll('.hotspot-chip').forEach(c => c.classList.remove('active'));
       el.classList.add('active');
       renderItems();
@@ -1279,6 +1284,7 @@
       const items = getItems();
       const search = document.getElementById('searchInput').value.toLowerCase().trim();
       const grid = document.getElementById('itemsGrid');
+      const pagination = document.getElementById('itemsPagination');
 
       // Update counters
       const total = items.filter(i => i.type !== 'registered').length;
@@ -1322,6 +1328,7 @@
       }
 
       if (filtered.length === 0) {
+        pagination.innerHTML = '';
         grid.innerHTML = `
           <div style="grid-column: 1 / -1; text-align: center; padding: 3rem 1rem; color: var(--text-muted);">
             <p style="font-size: 1.1rem; font-weight: 600;">No items found</p>
@@ -1331,7 +1338,11 @@
         return;
       }
 
-      grid.innerHTML = filtered.map(item => {
+      const totalPages = Math.ceil(filtered.length / itemsPerPage);
+      if (currentPage > totalPages) currentPage = totalPages;
+      const pageItems = filtered.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
+
+      grid.innerHTML = pageItems.map(item => {
         // Special rendering for registered belongings in vault
         if (item.type === 'registered') {
           return `
@@ -1437,6 +1448,28 @@
           </div>
         `;
       }).join('');
+      renderItemsPagination(totalPages);
+    }
+
+    function renderItemsPagination(totalPages) {
+      const pagination = document.getElementById('itemsPagination');
+      if (!pagination || totalPages <= 1) {
+        if (pagination) pagination.innerHTML = '';
+        return;
+      }
+
+      let controls = `<button class="pagination-btn" onclick="goToItemsPage(${currentPage - 1})" ${currentPage === 1 ? 'disabled' : ''}>Previous</button>`;
+      for (let page = 1; page <= totalPages; page++) {
+        controls += `<button class="pagination-btn ${page === currentPage ? 'active' : ''}" onclick="goToItemsPage(${page})" aria-label="Page ${page}">${page}</button>`;
+      }
+      controls += `<button class="pagination-btn" onclick="goToItemsPage(${currentPage + 1})" ${currentPage === totalPages ? 'disabled' : ''}>Next</button>`;
+      pagination.innerHTML = controls;
+    }
+
+    function goToItemsPage(page) {
+      currentPage = page;
+      renderItems();
+      document.getElementById('items').scrollIntoView({ behavior: 'smooth', block: 'start' });
     }
 
     // FEATURE: Digital "Found" QR Code Stickers (Preventive Add-on Feature)

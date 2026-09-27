@@ -608,6 +608,7 @@
     <div class="projects-grid" id="itemsGrid">
       <!-- Loaded dynamically via Express API -->
     </div>
+    <div class="items-pagination" id="itemsPagination" aria-label="Items pagination"></div>
   </section>
 
   <hr class="section-divider" />
@@ -991,9 +992,9 @@
       <p style="font-size: 0.84rem; color: var(--text-muted); line-height: 1.5; margin-bottom: 1.25rem;">
         Belonging Registration is a <strong>preventive feature</strong> available exclusively to authenticated CSPC students and staff. This guarantees that <strong>only you have access</strong> to your registered belongings and notification alerts.
       </p>
-      <div style="display: flex; gap: 0.75rem; justify-content: center;">
-        <button type="button" class="btn btn-outline" onclick="closeAuthRequiredModal()">Cancel</button>
-        <a href="/login" class="btn btn-primary" style="padding: 0.5rem 1.25rem; text-decoration: none;">Sign In / Register</a>
+      <div style="display: flex; gap: 0.75rem; justify-content: center; align-items: stretch;">
+        <button type="button" class="btn btn-outline" onclick="closeAuthRequiredModal()" style="height: 3.25rem; flex: 1; display: inline-flex; align-items: center; justify-content: center; text-align: center;">Cancel</button>
+        <a href="/login" class="btn btn-primary" style="height: 3.25rem; flex: 1; display: inline-flex; align-items: center; justify-content: center; text-align: center; padding: 0.7rem 1.5rem; text-decoration: none;">Sign In / Register</a>
       </div>
     </div>
   </div>
@@ -1142,6 +1143,8 @@
     let currentUser = null;
     let currentFilter = 'all';
     let currentLocationFilter = '';
+    let currentPage = 1;
+    const itemsPerPage = 6;
     let loadedItems = [];
 
     async function checkAuthSession() {
@@ -1234,6 +1237,7 @@
     }
 
     async function fetchAndRenderItems() {
+      currentPage = 1;
       const search = document.getElementById('searchInput').value.trim();
       const params = new URLSearchParams();
 
@@ -1263,8 +1267,10 @@
 
     function renderItemsGrid(items) {
       const grid = document.getElementById('itemsGrid');
+      const pagination = document.getElementById('itemsPagination');
 
       if (!items || items.length === 0) {
+        pagination.innerHTML = '';
         if (currentFilter === 'registered') {
           grid.innerHTML = `
             <div style="grid-column: 1 / -1; text-align: center; padding: 3.5rem 1rem; background: rgba(59,130,246,0.06); border: 1.5px dashed rgba(59,130,246,0.35); border-radius: 16px;">
@@ -1288,7 +1294,11 @@
         return;
       }
 
-      grid.innerHTML = items.map(item => {
+      const totalPages = Math.ceil(items.length / itemsPerPage);
+      if (currentPage > totalPages) currentPage = totalPages;
+      const pageItems = items.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
+
+      grid.innerHTML = pageItems.map(item => {
         // Special render for personal preventive registered belongings
         if (item.type === 'registered') {
           return `
@@ -1403,6 +1413,28 @@
           </div>
         `;
       }).join('');
+      renderItemsPagination(totalPages);
+    }
+
+    function renderItemsPagination(totalPages) {
+      const pagination = document.getElementById('itemsPagination');
+      if (!pagination || totalPages <= 1) {
+        if (pagination) pagination.innerHTML = '';
+        return;
+      }
+
+      let controls = `<button class="pagination-btn" onclick="goToItemsPage(${currentPage - 1})" ${currentPage === 1 ? 'disabled' : ''}>Previous</button>`;
+      for (let page = 1; page <= totalPages; page++) {
+        controls += `<button class="pagination-btn ${page === currentPage ? 'active' : ''}" onclick="goToItemsPage(${page})" aria-label="Page ${page}">${page}</button>`;
+      }
+      controls += `<button class="pagination-btn" onclick="goToItemsPage(${currentPage + 1})" ${currentPage === totalPages ? 'disabled' : ''}>Next</button>`;
+      pagination.innerHTML = controls;
+    }
+
+    function goToItemsPage(page) {
+      currentPage = page;
+      renderItemsGrid(loadedItems);
+      document.getElementById('items').scrollIntoView({ behavior: 'smooth', block: 'start' });
     }
 
     function formatTimestamp(isoOrDateStr) {

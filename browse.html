@@ -91,6 +91,34 @@
       gap: 1.1rem;
     }
 
+    .items-pagination {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 0.45rem;
+      margin-top: 1.5rem;
+    }
+    .pagination-btn {
+      min-width: 2.25rem;
+      height: 2.25rem;
+      padding: 0 0.7rem;
+      border: 1px solid rgba(59, 130, 246, 0.35);
+      border-radius: 7px;
+      background: transparent;
+      color: var(--text-muted);
+      font-size: 0.78rem;
+      font-weight: 700;
+      cursor: pointer;
+    }
+    .pagination-btn:hover:not(:disabled),
+    .pagination-btn.active {
+      background: var(--blue-main);
+      border-color: var(--blue-main);
+      color: #ffffff;
+    }
+    .pagination-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
     /* ── Type filter tabs ── */
     .type-tabs {
       display: flex;
@@ -186,6 +214,7 @@
     </div>
 
     <div class="browse-grid" id="browseGrid"></div>
+    <div class="items-pagination" id="itemsPagination" aria-label="Items pagination"></div>
 
   </div>
 
@@ -204,6 +233,8 @@
   <script src="app.js"></script>
   <script>
     let activeType = 'all';
+    let currentPage = 1;
+    const itemsPerPage = 6;
 
     document.addEventListener('DOMContentLoaded', () => {
       document.getElementById('navMount').innerHTML = renderNav('browse.html');
@@ -256,7 +287,8 @@
       renderGrid();
     });
 
-    function renderGrid() {
+    function renderGrid(resetPage = true) {
+      if (resetPage) currentPage = 1;
       let items = getItems();
 
       // Type filter
@@ -296,7 +328,9 @@
 
       // Render
       const grid = document.getElementById('browseGrid');
+      const pagination = document.getElementById('itemsPagination');
       if (items.length === 0) {
+        pagination.innerHTML = '';
         grid.innerHTML = `
           <div class="empty-state" style="grid-column:1/-1">
             <div class="empty-state-icon">🔍</div>
@@ -304,8 +338,33 @@
             <p>Try adjusting your filters or <a href="report-lost.html" style="color:var(--blue-main)">report a new item</a>.</p>
           </div>`;
       } else {
-        grid.innerHTML = items.map(buildItemCard).join('');
+        const totalPages = Math.ceil(items.length / itemsPerPage);
+        if (currentPage > totalPages) currentPage = totalPages;
+        const pageItems = items.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
+        grid.innerHTML = pageItems.map(buildItemCard).join('');
+        renderItemsPagination(totalPages);
       }
+    }
+
+    function renderItemsPagination(totalPages) {
+      const pagination = document.getElementById('itemsPagination');
+      if (totalPages <= 1) {
+        pagination.innerHTML = '';
+        return;
+      }
+
+      let controls = `<button class="pagination-btn" onclick="goToItemsPage(${currentPage - 1})" ${currentPage === 1 ? 'disabled' : ''}>Previous</button>`;
+      for (let page = 1; page <= totalPages; page++) {
+        controls += `<button class="pagination-btn ${page === currentPage ? 'active' : ''}" onclick="goToItemsPage(${page})" aria-label="Page ${page}">${page}</button>`;
+      }
+      controls += `<button class="pagination-btn" onclick="goToItemsPage(${currentPage + 1})" ${currentPage === totalPages ? 'disabled' : ''}>Next</button>`;
+      pagination.innerHTML = controls;
+    }
+
+    function goToItemsPage(page) {
+      currentPage = page;
+      renderGrid(false);
+      document.getElementById('browseGrid').scrollIntoView({ behavior: 'smooth', block: 'start' });
     }
   </script>
 </body>
