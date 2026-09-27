@@ -52,7 +52,7 @@ lostfound/
 4. Show server-side validation by submitting an empty form.
 
 #### Demo Step 3: Smart Match Detection
-1. Log out the student. Log in as **admin** (`admin@my.cspc.edu.ph` / `AdminPassword123!`).
+1. Log out the student. Log in as **admin** (`admin@cspc.edu.ph` / `AdminPassword123!`).
 2. Report a found item: "Casio Scientific Calculator FX-991ES" at CEA.
 3. Show the automatic match notification linking it to the existing lost calculator report.
 
@@ -132,7 +132,7 @@ Use this rubric when evaluating the opposing team's project during the defense:
 
 | Role | Email | Password |
 | :--- | :--- | :--- |
-| Admin (SAO Officer) | `admin@my.cspc.edu.ph` | `AdminPassword123!` |
+| Admin (SAO Officer) | `admin@cspc.edu.ph` | `AdminPassword123!` |
 | Student | `student@my.cspc.edu.ph` | `StudentPassword123!` |
 
 **Server Start Command:**

@@ -83,8 +83,13 @@ function validateUserAuth(req, res, next) {
   const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
   if (!email || !emailRegex.test(email.trim())) {
     errors.push('A valid email address is required.');
-  } else if (!email.trim().toLowerCase().endsWith('@my.cspc.edu.ph')) {
-    errors.push('Only a CSPC email address (@my.cspc.edu.ph) is allowed.');
+  } else {
+    const normalizedEmail = email.trim().toLowerCase();
+    const isStudentDomain = normalizedEmail.endsWith('@my.cspc.edu.ph');
+    const isStaffDomain = normalizedEmail.endsWith('@cspc.edu.ph');
+    if (!isStudentDomain && !isStaffDomain) {
+      errors.push('Use a CSPC email address ending in @my.cspc.edu.ph or @cspc.edu.ph.');
+    }
   }
 
   if (!password || password.length < 6) {

@@ -25,6 +25,12 @@ function saveUsers(users) {
 router.post('/register', validateUserAuth, async (req, res) => {
   try {
     const { email, password, fullName, studentId, department } = req.body;
+    if (!email.endsWith('@my.cspc.edu.ph')) {
+      return res.status(400).json({
+        success: false,
+        message: 'Student registration requires an @my.cspc.edu.ph email address.'
+      });
+    }
     const users = getUsers();
 
     const existing = users.find(u => u.email.toLowerCase() === email.toLowerCase());
@@ -86,6 +92,14 @@ router.post('/login', validateUserAuth, async (req, res) => {
       return res.status(401).json({
         success: false,
         message: 'Invalid email or password.'
+      });
+    }
+
+    const expectedDomain = user.role === 'student' ? '@my.cspc.edu.ph' : '@cspc.edu.ph';
+    if (!email.endsWith(expectedDomain)) {
+      return res.status(401).json({
+        success: false,
+        message: 'Use the email domain assigned to your account role.'
       });
     }
 
