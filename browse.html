@@ -7,6 +7,12 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800;900&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="style.css" />
+  <script>
+    (function() {
+      const saved = localStorage.getItem('cspc_theme') || 'dark';
+      document.documentElement.setAttribute('data-theme', saved);
+    })();
+  </script>
   <style>
     /* ── Filter Bar ── */
     .filter-bar {
@@ -31,7 +37,7 @@
       font-size: 0.72rem;
       font-weight: 700;
       letter-spacing: 0.08em;
-      color: var(--yellow-dark);
+      color: var(--blue-dark);
       text-transform: uppercase;
     }
     .search-wrap {
@@ -65,7 +71,7 @@
       font-size: 0.8rem;
       color: var(--text-muted);
     }
-    .results-count strong { color: var(--yellow-main); }
+    .results-count strong { color: var(--blue-main); }
 
     .sort-select {
       background: var(--card-bg);
@@ -95,7 +101,7 @@
     .type-tab {
       padding: 0.45rem 1.1rem;
       border-radius: 8px;
-      border: 1.5px solid rgba(250,204,21,0.2);
+      border: 1.5px solid rgba(59,130,246,0.2);
       background: transparent;
       color: var(--text-muted);
       font-size: 0.8rem;
@@ -103,11 +109,11 @@
       cursor: pointer;
       transition: all 0.2s;
     }
-    .type-tab:hover { border-color: rgba(250,204,21,0.5); color: var(--yellow-main); }
+    .type-tab:hover { border-color: rgba(59,130,246,0.5); color: var(--blue-main); }
     .type-tab.active {
-      background: rgba(250,204,21,0.12);
-      border-color: var(--yellow-main);
-      color: var(--yellow-main);
+      background: rgba(59,130,246,0.12);
+      border-color: var(--blue-main);
+      color: var(--blue-main);
     }
 
     @media (max-width: 600px) {
@@ -295,7 +301,7 @@
           <div class="empty-state" style="grid-column:1/-1">
             <div class="empty-state-icon">🔍</div>
             <h3>No items found</h3>
-            <p>Try adjusting your filters or <a href="report-lost.html" style="color:var(--yellow-main)">report a new item</a>.</p>
+            <p>Try adjusting your filters or <a href="report-lost.html" style="color:var(--blue-main)">report a new item</a>.</p>
           </div>`;
       } else {
         grid.innerHTML = items.map(buildItemCard).join('');
