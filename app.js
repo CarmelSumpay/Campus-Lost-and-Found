@@ -306,13 +306,22 @@ function renderNav(activePage = '') {
   return `
   <nav class="navbar">
     <div class="navbar-container">
-      <div class="nav-logo">
-        <span class="logo-icon">🔍</span> CSPC Lost &amp; Found
+      <a href="index.html" class="nav-logo">
+        <img src="cspc-logo.png" alt="CSPC Logo" />
+        <span class="nav-logo-full">CSPC Lost &amp; Found</span>
+        <span class="nav-logo-short">CSPC L&amp;F</span>
+      </a>
+      <div class="nav-links" id="navLinks">
+        ${links}
       </div>
-      <div class="nav-links" id="navLinks">${links}</div>
-      <button class="menu-toggle" id="menuToggle" aria-label="Toggle menu">
-        <span></span><span></span><span></span>
-      </button>
+      <div class="nav-actions">
+        <button type="button" class="theme-toggle" id="themeToggleBtn" onclick="toggleTheme()" title="Toggle Theme" aria-label="Toggle theme">
+          <span class="theme-toggle-icon">🌙</span>
+        </button>
+        <button class="menu-toggle" id="menuToggle" aria-label="Toggle navigation menu">
+          <span></span><span></span><span></span>
+        </button>
+      </div>
     </div>
   </nav>`;
 }
@@ -321,8 +330,48 @@ function initNav() {
   const toggle = document.getElementById('menuToggle');
   const links  = document.getElementById('navLinks');
   if (toggle && links) {
-    toggle.addEventListener('click', () => links.classList.toggle('open'));
+    toggle.addEventListener('click', (e) => {
+      e.stopPropagation();
+      links.classList.toggle('open');
+    });
+    document.addEventListener('click', (e) => {
+      if (!links.contains(e.target) && !toggle.contains(e.target)) {
+        links.classList.remove('open');
+      }
+    });
+    links.querySelectorAll('a').forEach(a => {
+      a.addEventListener('click', () => links.classList.remove('open'));
+    });
   }
+  updateThemeIcon();
+}
+
+/* ══════════════════════════════════
+   THEME LOGIC
+   ══════════════════════════════════ */
+
+function toggleTheme() {
+  const html = document.documentElement;
+  const current = html.getAttribute('data-theme') || 'dark';
+  const next = current === 'light' ? 'dark' : 'light';
+  html.setAttribute('data-theme', next);
+  localStorage.setItem('cspc_theme', next);
+  updateThemeIcon();
+}
+
+function updateThemeIcon() {
+  const theme = document.documentElement.getAttribute('data-theme') || 'dark';
+  document.querySelectorAll('.theme-toggle').forEach(btn => {
+    btn.innerHTML = `<span class="theme-toggle-icon">${theme === 'light' ? '☀️' : '🌙'}</span>`;
+    btn.setAttribute('title', theme === 'light' ? 'Switch to Dark Mode' : 'Switch to Light Mode');
+    btn.setAttribute('aria-label', theme === 'light' ? 'Switch to Dark Mode' : 'Switch to Light Mode');
+  });
+}
+
+function loadTheme() {
+  const saved = localStorage.getItem('cspc_theme') || 'dark';
+  document.documentElement.setAttribute('data-theme', saved);
+  updateThemeIcon();
 }
 
 /* ══════════════════════════════════
@@ -383,7 +432,7 @@ function injectSharedStyles() {
     }
     .badge-lost    { background: rgba(239,68,68,0.15); color:#f87171; border:1px solid rgba(239,68,68,0.3); }
     .badge-found   { background: rgba(34,197,94,0.13); color:#4ade80; border:1px solid rgba(34,197,94,0.3); }
-    .badge-claimed { background: rgba(234,179,8,0.13); color:#facc15; border:1px solid rgba(234,179,8,0.3); }
+    .badge-claimed { background: rgba(59,130,246,0.13); color:#60a5fa; border:1px solid rgba(59,130,246,0.3); }
 
     /* ── Item Cards ── */
     .item-card {
@@ -398,8 +447,8 @@ function injectSharedStyles() {
       transition: border-color 0.2s, box-shadow 0.2s, transform 0.2s;
     }
     .item-card:hover {
-      border-color: rgba(234,179,8,0.5);
-      box-shadow: 0 0 24px rgba(250,204,21,0.12);
+      border-color: rgba(59,130,246,0.5);
+      box-shadow: 0 0 24px rgba(59,130,246,0.12);
       transform: translateY(-3px);
     }
     .item-card-top {
@@ -416,7 +465,7 @@ function injectSharedStyles() {
       width: 100%; height: 100%;
       display: flex; align-items: center; justify-content: center;
       font-size: 3rem;
-      background: rgba(250,204,21,0.05);
+      background: rgba(59,130,246,0.05);
     }
     .item-card-badges {
       position: absolute;
@@ -430,7 +479,7 @@ function injectSharedStyles() {
     }
     .item-card-category {
       font-size: 0.72rem; font-weight: 600;
-      color: var(--yellow-dark); letter-spacing: 0.06em;
+      color: var(--blue-dark); letter-spacing: 0.06em;
     }
     .item-card-title {
       font-size: 0.95rem; font-weight: 700;
@@ -446,11 +495,11 @@ function injectSharedStyles() {
 
     /* ── Forms ── */
     .form-group { display: flex; flex-direction: column; gap: 0.4rem; }
-    .form-label { font-size: 0.8rem; font-weight: 600; color: var(--yellow-light); letter-spacing: 0.04em; }
+    .form-label { font-size: 0.8rem; font-weight: 600; color: var(--blue-light); letter-spacing: 0.04em; }
     .form-label .required { color: #f87171; margin-left: 2px; }
     .form-control {
       background: rgba(255,255,255,0.05);
-      border: 1.5px solid rgba(250,204,21,0.2);
+      border: 1.5px solid rgba(59,130,246,0.2);
       border-radius: 8px;
       padding: 0.65rem 0.9rem;
       color: var(--text-main);
@@ -460,8 +509,8 @@ function injectSharedStyles() {
       width: 100%;
     }
     .form-control:focus {
-      border-color: rgba(250,204,21,0.55);
-      box-shadow: 0 0 0 3px rgba(250,204,21,0.08);
+      border-color: rgba(59,130,246,0.55);
+      box-shadow: 0 0 0 3px rgba(59,130,246,0.08);
     }
     .form-control::placeholder { color: var(--text-muted); }
     select.form-control option { background: #27272a; color: var(--text-main); }
@@ -477,11 +526,11 @@ function injectSharedStyles() {
       transition: border-color 0.2s, box-shadow 0.2s;
     }
     .stat-card:hover {
-      border-color: rgba(234,179,8,0.4);
-      box-shadow: 0 0 18px rgba(250,204,21,0.1);
+      border-color: rgba(59,130,246,0.4);
+      box-shadow: 0 0 18px rgba(59,130,246,0.1);
     }
     .stat-icon { font-size: 1.8rem; }
-    .stat-number { font-size: 2rem; font-weight: 900; color: var(--yellow-main); line-height: 1; }
+    .stat-number { font-size: 2rem; font-weight: 900; color: var(--blue-main); line-height: 1; }
     .stat-label  { font-size: 0.78rem; font-weight: 600; color: var(--text-muted); letter-spacing: 0.05em; }
 
     /* ── Toast ── */
@@ -489,7 +538,7 @@ function injectSharedStyles() {
       position: fixed;
       bottom: 1.5rem; right: 1.5rem;
       background: #27272a;
-      border: 1px solid rgba(250,204,21,0.3);
+      border: 1px solid rgba(59,130,246,0.3);
       border-radius: 10px;
       padding: 0.85rem 1.2rem;
       font-size: 0.875rem;
@@ -533,7 +582,7 @@ function injectSharedStyles() {
       float:right; background:none; border:none; color:var(--text-muted);
       font-size:1.3rem; cursor:pointer; line-height:1;
     }
-    .modal-close:hover { color: var(--yellow-main); }
+    .modal-close:hover { color: var(--blue-main); }
 
     /* ── Page Header ── */
     .page-header {
@@ -545,7 +594,7 @@ function injectSharedStyles() {
     .page-header h1 {
       font-size: clamp(1.6rem, 4vw, 2.4rem);
       font-weight: 900;
-      background: linear-gradient(90deg, #ffffff 40%, #eab308 100%);
+      background: linear-gradient(90deg, #ffffff 40%, #3b82f6 100%);
       -webkit-background-clip: text;
       -webkit-text-fill-color: transparent;
       background-clip: text;
@@ -564,7 +613,7 @@ function injectSharedStyles() {
     }
 
     /* ── Nav active ── */
-    .nav-active { color: var(--yellow-main) !important; }
+    .nav-active { color: var(--blue-main) !important; }
 
     /* ── Empty state ── */
     .empty-state {
@@ -575,12 +624,62 @@ function injectSharedStyles() {
     .empty-state-icon { font-size: 3.5rem; margin-bottom: 1rem; }
     .empty-state h3 { font-size: 1rem; font-weight: 700; color: var(--text-main); margin-bottom: 0.5rem; }
     .empty-state p  { font-size: 0.875rem; }
+
+    /* Light mode shared overrides */
+    [data-theme='light'] .item-card {
+      background: #ffffff;
+      border-color: rgba(37,99,235,0.18);
+      box-shadow: 0 4px 18px rgba(0,0,0,0.05);
+    }
+    [data-theme='light'] .item-card:hover {
+      border-color: rgba(37,99,235,0.5);
+      box-shadow: 0 0 24px rgba(37,99,235,0.15);
+    }
+    [data-theme='light'] .item-card-title {
+      color: #0f172a;
+    }
+    [data-theme='light'] .form-label,
+    [data-theme='light'] label {
+      color: #1e3a8a !important;
+      font-weight: 700 !important;
+    }
+    [data-theme='light'] .form-control {
+      background: #ffffff;
+      border-color: rgba(37,99,235,0.25);
+      color: #0f172a;
+    }
+    [data-theme='light'] select.form-control option {
+      background: #ffffff;
+      color: #0f172a;
+    }
+    [data-theme='light'] .stat-card {
+      background: #ffffff;
+      border-color: rgba(37,99,235,0.18);
+      box-shadow: 0 4px 18px rgba(0,0,0,0.05);
+    }
+    [data-theme='light'] .page-header h1 {
+      background: linear-gradient(90deg, #0f172a 40%, #2563eb 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    [data-theme='light'] .modal {
+      background: #ffffff;
+      color: #0f172a;
+      box-shadow: 0 10px 40px rgba(0,0,0,0.15);
+    }
+    [data-theme='light'] .toast {
+      background: #ffffff;
+      color: #0f172a;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.12);
+    }
   `;
   document.head.appendChild(style);
 }
 
 /* ── Auto-init on load ── */
 document.addEventListener('DOMContentLoaded', () => {
+  loadTheme();
   initSeeds();
   injectSharedStyles();
 });
