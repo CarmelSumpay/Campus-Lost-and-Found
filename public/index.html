@@ -885,9 +885,9 @@
   <!-- LOGOUT CONFIRMATION MODAL -->
   <div class="slip-overlay" id="logoutConfirmModal" onclick="if(event.target===this) closeLogoutModal()">
     <div style="background: #18181b; border: 1px solid var(--border); border-radius: 16px; padding: 1.75rem; max-width: 400px; width: 90%; text-align: center; box-shadow: 0 10px 40px rgba(0,0,0,0.85);">
-      <div style="font-size: 2.2rem; margin-bottom: 0.5rem;">🚪</div>
-      <h3 style="font-size: 1.1rem; font-weight: 800; color: var(--text-main); margin-bottom: 0.5rem;">Sign Out of System?</h3>
-      <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 1.25rem;">You will need to sign in again to access your reporter/admin features.</p>
+      <div style="font-size: 2.2rem; font-weight: 700; color: var(--blue-main); margin-bottom: 0.5rem;">↪</div>
+      <h3 style="font-size: 1.1rem; font-weight: 800; color: var(--text-main); margin-bottom: 0.5rem;">Confirm Sign Out</h3>
+      <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 1.25rem;">You are about to end your current session.</p>
       <div style="display: flex; gap: 0.75rem; justify-content: center;">
         <button type="button" class="btn btn-outline" onclick="closeLogoutModal()" style="padding: 0.5rem 1.25rem;">Cancel</button>
         <button type="button" class="btn btn-primary" onclick="executeLogout()" style="padding: 0.5rem 1.25rem;">Sign Out</button>
