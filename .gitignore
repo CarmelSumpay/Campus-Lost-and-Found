@@ -6,8 +6,8 @@ node_modules/
 .env.local
 .env.*.local
 
-# Data files (runtime-generated)
-data/
+# Runtime-generated user accounts stay local and private
+data/users.json
 
 # Logs
 logs/
