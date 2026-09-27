@@ -757,7 +757,12 @@
 
         <div class="input-field" style="margin-bottom: 1rem;">
           <label for="itemPhotoInput">Upload Photo (Optional)</label>
-          <input type="file" id="itemPhotoInput" accept="image/*" onchange="handlePhotoSelect(event)" style="padding: 0.45rem 0.65rem;" />
+          <div class="photo-upload-area" role="button" tabindex="0" onclick="document.getElementById('itemPhotoInput').click()" onkeydown="if(event.key === 'Enter' || event.key === ' ') { event.preventDefault(); document.getElementById('itemPhotoInput').click(); }" ondragover="event.preventDefault(); this.classList.add('dragover')" ondragleave="this.classList.remove('dragover')" ondrop="handlePhotoDrop(event)">
+            <div class="photo-upload-icon" aria-hidden="true"><span>☁</span><strong>↑</strong></div>
+            <strong>Click or drag and drop image here</strong>
+            <small>PNG, JPG, or WEBP up to 5MB</small>
+          </div>
+          <input type="file" id="itemPhotoInput" accept="image/*" onchange="handlePhotoSelect(event)" style="display: none;" />
           <div id="photoPreviewBox" style="display: none; margin-top: 0.5rem; position: relative;">
             <img id="photoPreviewImg" src="" alt="Photo Preview" style="max-height: 140px; border-radius: 8px; border: 1px solid var(--blue-main); object-fit: cover; width: 100%;" />
             <button type="button" onclick="removePhoto()" style="position: absolute; top: 6px; right: 6px; background: rgba(239, 68, 68, 0.9); color: white; border: none; border-radius: 4px; padding: 0.25rem 0.55rem; font-size: 0.72rem; cursor: pointer; font-weight: 700;">✕ Remove Photo</button>
@@ -769,9 +774,12 @@
           <textarea id="itemDesc" placeholder="Describe color, brand, special marks, stickers, or where to claim it..." required minlength="5"></textarea>
         </div>
 
-        <button type="submit" class="btn btn-primary" style="width: 100%; border: none; cursor: pointer;">
-          Submit Report
-        </button>
+        <div style="display: flex; gap: 0.75rem; margin-top: 0.25rem;">
+          <button type="button" class="btn btn-outline" onclick="resetItemForm()" style="flex: 1; border: 1px solid var(--border); cursor: pointer;">Cancel</button>
+          <button type="submit" class="btn btn-primary" style="flex: 1; border: none; cursor: pointer;">
+            Submit Report
+          </button>
+        </div>
       </form>
     </div>
   </section>
@@ -1800,12 +1808,21 @@
     let currentPhotoBase64 = '';
 
     function handlePhotoSelect(e) {
-      const file = e.target.files[0];
+      handlePhotoFile(e.target.files[0]);
+    }
+
+    function handlePhotoDrop(e) {
+      e.preventDefault();
+      e.currentTarget.classList.remove('dragover');
+      handlePhotoFile(e.dataTransfer.files[0]);
+    }
+
+    function handlePhotoFile(file) {
       if (!file) return;
 
       if (file.size > 5 * 1024 * 1024) {
         showToast('Image file size must be less than 5MB.', true);
-        e.target.value = '';
+        document.getElementById('itemPhotoInput').value = '';
         return;
       }
 
@@ -1824,6 +1841,12 @@
       if (input) input.value = '';
       document.getElementById('photoPreviewBox').style.display = 'none';
       document.getElementById('photoPreviewImg').src = '';
+    }
+
+    function resetItemForm() {
+      document.getElementById('itemForm').reset();
+      removePhoto();
+      updateTypeRadio();
     }
 
     async function handleFormSubmit(e) {

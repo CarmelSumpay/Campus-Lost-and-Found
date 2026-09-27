@@ -1301,3 +1301,51 @@ select::placeholder,
   opacity: 0.4;
   cursor: not-allowed;
 }
+
+.photo-upload-area {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.3rem;
+  min-height: 9rem;
+  padding: 1rem;
+  border: 1.5px dashed rgba(59, 130, 246, 0.45);
+  border-radius: 10px;
+  background: rgba(59, 130, 246, 0.04);
+  color: var(--text-main);
+  text-align: center;
+  cursor: pointer;
+  transition: border-color 0.2s ease, background 0.2s ease;
+}
+
+.photo-upload-area:hover,
+.photo-upload-area:focus-visible,
+.photo-upload-area.dragover {
+  border-color: var(--blue-main);
+  background: rgba(59, 130, 246, 0.1);
+  outline: none;
+}
+
+.photo-upload-area small {
+  color: var(--text-muted);
+  font-size: 0.75rem;
+}
+
+.photo-upload-icon {
+  position: relative;
+  height: 2.8rem;
+  color: #fbbf24;
+  font-size: 3rem;
+  line-height: 2.2rem;
+}
+
+.photo-upload-icon strong {
+  position: absolute;
+  left: 50%;
+  top: 0.15rem;
+  transform: translateX(-50%);
+  color: #ffffff;
+  font-size: 1.35rem;
+  line-height: 1;
+}
