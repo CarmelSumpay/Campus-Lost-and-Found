@@ -658,15 +658,8 @@
           </div>
           <div class="input-field">
             <label for="itemCategory">Category *</label>
-            <select id="itemCategory" required>
-              <option value="Electronics">Electronics</option>
-              <option value="ID / Cards">ID / Cards</option>
-              <option value="Bags & Wallets">Bags & Wallets</option>
-              <option value="Books & Documents">Books & Documents</option>
-              <option value="Keys">Keys</option>
-              <option value="Clothing & Accessories">Clothing & Accessories</option>
-              <option value="Others">Others</option>
-            </select>
+            <input type="hidden" id="itemCategory" />
+            <button type="button" class="category-picker" id="itemCategoryPicker" onclick="openCategoryPicker('itemCategory')">Select category...</button>
           </div>
         </div>
 
@@ -967,15 +960,8 @@
         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; margin-bottom: 0.9rem;">
           <div class="input-field">
             <label for="regCategory">Category <span class="required">*</span></label>
-            <select id="regCategory" required style="width: 100%; border-radius: 8px; padding: 0.6rem;">
-              <option value="Electronics">Electronics (Laptop, Calc, Phone)</option>
-              <option value="Water Bottles/Tumblers">Water Bottle / Tumbler</option>
-              <option value="Bags & Wallets">Bag, Backpack, Wallet</option>
-              <option value="Books & Documents">Books & Binder Folders</option>
-              <option value="School Supplies">School Supplies</option>
-              <option value="Keys">Keys</option>
-              <option value="Others">Others</option>
-            </select>
+            <input type="hidden" id="regCategory" />
+            <button type="button" class="category-picker" id="regCategoryPicker" onclick="openCategoryPicker('regCategory')">Select category...</button>
           </div>
           <div class="input-field">
             <label for="regLocation">Primary Building</label>
@@ -1005,6 +991,28 @@
           <button type="submit" class="btn btn-primary" id="regSubmitBtn">✨ Register &amp; Generate QR Sticker</button>
         </div>
       </form>
+    </div>
+  </div>
+
+  <div class="slip-overlay" id="categoryPickerModal" onclick="if(event.target===this) closeCategoryPicker()">
+    <div class="category-picker-modal" role="dialog" aria-modal="true" aria-labelledby="categoryPickerTitle">
+      <div class="category-picker-header">
+        <div><span class="category-picker-eyebrow">Item classification</span><h2 id="categoryPickerTitle">Select a Category</h2></div>
+        <button type="button" class="category-picker-close" onclick="closeCategoryPicker()" aria-label="Close category picker">&times;</button>
+      </div>
+      <div class="category-grid">
+        <button type="button" class="category-option" onclick="selectCategory('Electronics', '📱')"><span>📱</span>Electronics</button>
+        <button type="button" class="category-option" onclick="selectCategory('Water Bottles/Tumblers', '🥤')"><span>🥤</span>Water Bottles / Tumblers</button>
+        <button type="button" class="category-option" onclick="selectCategory('Clothing & Accessories', '👕')"><span>👕</span>Clothing &amp; Accessories</button>
+        <button type="button" class="category-option" onclick="selectCategory('Books & Documents', '📚')"><span>📚</span>Books &amp; Documents</button>
+        <button type="button" class="category-option" onclick="selectCategory('Bags & Wallets', '🎒')"><span>🎒</span>Bags &amp; Wallets</button>
+        <button type="button" class="category-option" onclick="selectCategory('Keys', '🔑')"><span>🔑</span>Keys</button>
+        <button type="button" class="category-option" onclick="selectCategory('Jewelry', '💍')"><span>💍</span>Jewelry</button>
+        <button type="button" class="category-option" onclick="selectCategory('Sports Equipment', '⚽')"><span>⚽</span>Sports Equipment</button>
+        <button type="button" class="category-option" onclick="selectCategory('School Supplies', '✏️')"><span>✏️</span>School Supplies</button>
+        <button type="button" class="category-option" onclick="selectCategory('ID / Cards', '🪪')"><span>🪪</span>ID / Cards</button>
+        <button type="button" class="category-option" onclick="selectCategory('Others', '📦')"><span>📦</span>Others</button>
+      </div>
     </div>
   </div>
 
@@ -1573,6 +1581,38 @@
       document.getElementById('registerBelongingModal').classList.remove('open');
       const form = document.getElementById('registerBelongingForm');
       if (form) form.reset();
+      resetCategoryPicker('regCategory');
+    }
+
+    let activeCategoryField = '';
+
+    function openCategoryPicker(fieldId) {
+      activeCategoryField = fieldId;
+      document.getElementById('categoryPickerModal').classList.add('open');
+    }
+
+    function closeCategoryPicker() {
+      document.getElementById('categoryPickerModal').classList.remove('open');
+      activeCategoryField = '';
+    }
+
+    function selectCategory(value, icon) {
+      if (!activeCategoryField) return;
+      document.getElementById(activeCategoryField).value = value;
+      const picker = document.getElementById(`${activeCategoryField}Picker`);
+      picker.innerHTML = `<span class="category-picker-selected-icon">${icon}</span>${value}`;
+      picker.classList.add('selected');
+      closeCategoryPicker();
+    }
+
+    function resetCategoryPicker(fieldId) {
+      const field = document.getElementById(fieldId);
+      const picker = document.getElementById(`${fieldId}Picker`);
+      if (field) field.value = '';
+      if (picker) {
+        picker.textContent = 'Select category...';
+        picker.classList.remove('selected');
+      }
     }
 
     function closeAuthRequiredModal() {
@@ -1848,6 +1888,7 @@
     function resetItemForm() {
       document.getElementById('itemForm').reset();
       removePhoto();
+      resetCategoryPicker('itemCategory');
       updateTypeRadio();
     }
 
