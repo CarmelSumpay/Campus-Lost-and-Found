@@ -7,6 +7,12 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800;900&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="style.css" />
+  <script>
+    (function() {
+      const saved = localStorage.getItem('cspc_theme') || 'dark';
+      document.documentElement.setAttribute('data-theme', saved);
+    })();
+  </script>
   <style>
     .form-card {
       background: var(--card-bg);
@@ -25,14 +31,14 @@
       font-size: 0.72rem;
       font-weight: 700;
       letter-spacing: 0.12em;
-      color: var(--yellow-main);
+      color: var(--blue-main);
       text-transform: uppercase;
       padding-bottom: 0.6rem;
-      border-bottom: 1px solid rgba(250,204,21,0.15);
+      border-bottom: 1px solid rgba(59,130,246,0.15);
       margin-bottom: 0.25rem;
     }
     .photo-upload-area {
-      border: 2px dashed rgba(250,204,21,0.25);
+      border: 2px dashed rgba(59,130,246,0.25);
       border-radius: 10px;
       padding: 1.5rem;
       text-align: center;
@@ -40,7 +46,7 @@
       transition: border-color 0.2s, background 0.2s;
       position: relative;
     }
-    .photo-upload-area:hover { border-color: rgba(250,204,21,0.5); background: rgba(250,204,21,0.04); }
+    .photo-upload-area:hover { border-color: rgba(59,130,246,0.5); background: rgba(59,130,246,0.04); }
     .photo-upload-area input { position:absolute;inset:0;opacity:0;cursor:pointer; }
     .photo-preview {
       display: none;
