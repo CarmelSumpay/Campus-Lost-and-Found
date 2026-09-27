@@ -7,6 +7,12 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800;900&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="style.css" />
+  <script>
+    (function() {
+      const saved = localStorage.getItem('cspc_theme') || 'dark';
+      document.documentElement.setAttribute('data-theme', saved);
+    })();
+  </script>
   <style>
     .auth-container {
       min-height: calc(100vh - 120px);
@@ -38,7 +44,7 @@
       background: #ffffff;
       padding: 3px;
       margin-bottom: 0.8rem;
-      box-shadow: 0 0 18px rgba(234, 179, 8, 0.3);
+      box-shadow: 0 0 18px rgba(37, 99, 235, 0.35);
     }
     .auth-header h1 {
       font-size: 1.25rem;
@@ -71,8 +77,8 @@
       transition: all 0.2s;
     }
     .auth-tab.active {
-      color: var(--yellow-main);
-      background: rgba(250, 204, 21, 0.12);
+      color: var(--blue-light);
+      background: rgba(37, 99, 235, 0.15);
     }
 
     .form-group {
@@ -84,14 +90,17 @@
     .form-group label {
       font-size: 0.75rem;
       font-weight: 700;
-      color: var(--yellow-light);
+      color: var(--blue-light);
       text-transform: uppercase;
       letter-spacing: 0.04em;
+    }
+    [data-theme='light'] .form-group label {
+      color: #1e3a8a !important;
     }
     .form-group input,
     .form-group select {
       background: rgba(255, 255, 255, 0.05);
-      border: 1.5px solid rgba(250, 204, 21, 0.22);
+      border: 1.5px solid rgba(59, 130, 246, 0.25);
       border-radius: 8px;
       padding: 0.65rem 0.85rem;
       color: var(--text-main);
@@ -102,16 +111,16 @@
     }
     .form-group input:focus,
     .form-group select:focus {
-      border-color: var(--yellow-main);
+      border-color: var(--blue-main);
     }
     .form-group select option {
-      background: #27272a;
+      background: #1e293b;
       color: var(--text-main);
     }
 
     .demo-creds {
-      background: rgba(250, 204, 21, 0.06);
-      border: 1px dashed rgba(250, 204, 21, 0.3);
+      background: rgba(37, 99, 235, 0.08);
+      border: 1px dashed rgba(59, 130, 246, 0.35);
       border-radius: 8px;
       padding: 0.75rem;
       margin-top: 1.25rem;
@@ -120,7 +129,7 @@
       line-height: 1.5;
     }
     .demo-creds strong {
-      color: var(--yellow-main);
+      color: var(--blue-light);
     }
 
     .error-msg {
@@ -146,9 +155,9 @@
     .btn-toggle-pw {
       position: absolute;
       right: 8px;
-      background: rgba(250, 204, 21, 0.12);
-      border: 1px solid rgba(250, 204, 21, 0.3);
-      color: var(--yellow-main);
+      background: rgba(37, 99, 235, 0.15);
+      border: 1px solid rgba(59, 130, 246, 0.35);
+      color: var(--blue-light);
       border-radius: 6px;
       padding: 0.25rem 0.6rem;
       font-size: 0.72rem;
@@ -158,7 +167,7 @@
       transition: all 0.2s;
     }
     .btn-toggle-pw:hover {
-      background: rgba(250, 204, 21, 0.25);
+      background: rgba(37, 99, 235, 0.25);
     }
   </style>
 </head>
@@ -167,12 +176,16 @@
   <!-- NAVBAR -->
   <nav class="navbar">
     <div class="navbar-container">
-      <div class="nav-logo" style="display: flex; align-items: center; gap: 0.65rem;">
-        <img src="cspc-logo.png" alt="CSPC Logo" style="width: 34px; height: 34px; object-fit: contain; border-radius: 50%; background: #ffffff; padding: 2px;" />
-        <span>CSPC Lost &amp; Found Management System</span>
-      </div>
-      <div class="nav-links">
-        <a href="/">Back to Dashboard</a>
+      <a href="/" class="nav-logo">
+        <img src="cspc-logo.png" alt="CSPC Logo" />
+        <span class="nav-logo-full">CSPC Lost &amp; Found Management System</span>
+        <span class="nav-logo-short">CSPC L&amp;F</span>
+      </a>
+      <div class="nav-actions">
+        <button class="theme-toggle" onclick="toggleTheme()" title="Switch Theme" aria-label="Toggle light and dark theme">
+          <span class="theme-toggle-icon">🌙</span>
+        </button>
+        <a href="/" class="btn btn-outline" style="padding: 0.45rem 0.9rem; font-size: 0.82rem; text-decoration: none;">Back to Dashboard</a>
       </div>
     </div>
   </nav>
@@ -282,11 +295,38 @@
       } else {
         input.type = 'password';
         btn.innerText = 'Show';
-        btn.style.borderColor = 'rgba(250, 204, 21, 0.3)';
-        btn.style.color = 'var(--yellow-main)';
-        btn.style.background = 'rgba(250, 204, 21, 0.12)';
+        btn.style.borderColor = 'rgba(59, 130, 246, 0.35)';
+        btn.style.color = 'var(--blue-light)';
+        btn.style.background = 'rgba(37, 99, 235, 0.15)';
       }
     }
+
+    // Theme toggle
+    function toggleTheme() {
+      const html = document.documentElement;
+      const current = html.getAttribute('data-theme') || 'dark';
+      const next = current === 'light' ? 'dark' : 'light';
+      html.setAttribute('data-theme', next);
+      localStorage.setItem('cspc_theme', next);
+      updateThemeIcon();
+    }
+
+    function updateThemeIcon() {
+      const theme = document.documentElement.getAttribute('data-theme') || 'dark';
+      document.querySelectorAll('.theme-toggle').forEach(btn => {
+        btn.innerHTML = `<span class="theme-toggle-icon">${theme === 'light' ? '☀️' : '🌙'}</span>`;
+        btn.setAttribute('title', theme === 'light' ? 'Switch to Dark Mode' : 'Switch to Light Mode');
+        btn.setAttribute('aria-label', theme === 'light' ? 'Switch to Dark Mode' : 'Switch to Light Mode');
+      });
+    }
+
+    function loadTheme() {
+      const saved = localStorage.getItem('cspc_theme') || 'dark';
+      document.documentElement.setAttribute('data-theme', saved);
+      updateThemeIcon();
+    }
+
+    document.addEventListener('DOMContentLoaded', loadTheme);
 
     function switchTab(tab) {
       const isLogin = tab === 'login';
