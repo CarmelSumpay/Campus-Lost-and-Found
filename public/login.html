@@ -254,13 +254,20 @@
           <input type="email" id="regEmail" placeholder="e.g., maria.santos@my.cspc.edu.ph" pattern="[^\s@]+@my\.cspc\.edu\.ph" title="Use your CSPC email address ending in @my.cspc.edu.ph" required />
         </div>
         <div class="form-group">
-          <label>Password (min 6 characters) *</label>
+          <label for="regPassword">Password *</label>
           <div class="password-wrap">
-            <input type="password" id="regPassword" placeholder="Create a secure password" minlength="6" required />
+            <input type="password" id="regPassword" placeholder="Create a secure password" minlength="8" required aria-describedby="passwordRequirements" />
             <button type="button" class="btn-toggle-pw" onclick="togglePasswordVisibility('regPassword', this)">Show</button>
           </div>
+          <ul class="password-requirements" id="passwordRequirements" aria-live="polite">
+            <li data-requirement="length">At least 8 characters</li>
+            <li data-requirement="uppercase">One uppercase letter (A-Z)</li>
+            <li data-requirement="lowercase">One lowercase letter (a-z)</li>
+            <li data-requirement="number">One number (0-9)</li>
+            <li data-requirement="special">One special symbol (!, @, #, $, %, ?, &, *)</li>
+          </ul>
         </div>
-        <button type="submit" class="btn btn-primary" style="width: 100%; border: none; cursor: pointer; margin-top: 0.5rem;">
+        <button type="submit" id="registerSubmit" class="btn btn-primary" style="width: 100%; border: none; cursor: pointer; margin-top: 0.5rem;" disabled>
           Create Student Account
         </button>
       </form>
@@ -346,6 +353,25 @@
       document.getElementById('authError').style.display = 'none';
     }
 
+    function updatePasswordRequirements() {
+      const password = document.getElementById('regPassword').value;
+      const requirements = {
+        length: password.length >= 8,
+        uppercase: /[A-Z]/.test(password),
+        lowercase: /[a-z]/.test(password),
+        number: /[0-9]/.test(password),
+        special: /[!@#$%?&*]/.test(password)
+      };
+
+      Object.entries(requirements).forEach(([name, satisfied]) => {
+        const item = document.querySelector(`[data-requirement="${name}"]`);
+        item.classList.toggle('satisfied', satisfied);
+        item.setAttribute('aria-label', `${satisfied ? 'Met' : 'Required'}: ${item.textContent}`);
+      });
+
+      document.getElementById('registerSubmit').disabled = !Object.values(requirements).every(Boolean);
+    }
+
     async function handleLogin(e) {
       e.preventDefault();
       hideError();
@@ -374,6 +400,12 @@
     async function handleRegister(e) {
       e.preventDefault();
       hideError();
+      updatePasswordRequirements();
+
+      if (document.getElementById('registerSubmit').disabled) {
+        showError('Please meet all password requirements before registering.');
+        return;
+      }
 
       const fullName = document.getElementById('regFullName').value.trim();
       const studentId = document.getElementById('regStudentId').value.trim();
@@ -398,6 +430,9 @@
         showError('Network error connecting to registration service.');
       }
     }
+
+    document.getElementById('regPassword').addEventListener('input', updatePasswordRequirements);
+    updatePasswordRequirements();
   </script>
 </body>
 </html>
