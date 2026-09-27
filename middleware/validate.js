@@ -83,6 +83,8 @@ function validateUserAuth(req, res, next) {
   const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
   if (!email || !emailRegex.test(email.trim())) {
     errors.push('A valid email address is required.');
+  } else if (!email.trim().toLowerCase().endsWith('@my.cspc.edu.ph')) {
+    errors.push('Only a CSPC email address (@my.cspc.edu.ph) is allowed.');
   }
 
   if (!password || password.length < 6) {

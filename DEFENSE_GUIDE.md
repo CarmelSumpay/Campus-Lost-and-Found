@@ -42,7 +42,7 @@ lostfound/
 #### Demo Step 1: Authentication Flow
 1. Open `http://localhost:3000` — show the public landing page.
 2. Click "Login" — demonstrate the login page.
-3. Log in as a **student** (`student@cspc.edu.ph` / `StudentPassword123!`).
+3. Log in as a **student** (`student@my.cspc.edu.ph` / `StudentPassword123!`).
 4. Show the dashboard: stats cards, user greeting, role indicator.
 
 #### Demo Step 2: Report a Lost Item
@@ -52,7 +52,7 @@ lostfound/
 4. Show server-side validation by submitting an empty form.
 
 #### Demo Step 3: Smart Match Detection
-1. Log out the student. Log in as **admin** (`admin@cspc.edu.ph` / `AdminPassword123!`).
+1. Log out the student. Log in as **admin** (`admin@my.cspc.edu.ph` / `AdminPassword123!`).
 2. Report a found item: "Casio Scientific Calculator FX-991ES" at CEA.
 3. Show the automatic match notification linking it to the existing lost calculator report.
 
@@ -132,8 +132,8 @@ Use this rubric when evaluating the opposing team's project during the defense:
 
 | Role | Email | Password |
 | :--- | :--- | :--- |
-| Admin (SAO Officer) | `admin@cspc.edu.ph` | `AdminPassword123!` |
-| Student | `student@cspc.edu.ph` | `StudentPassword123!` |
+| Admin (SAO Officer) | `admin@my.cspc.edu.ph` | `AdminPassword123!` |
+| Student | `student@my.cspc.edu.ph` | `StudentPassword123!` |
 
 **Server Start Command:**
 ```bash

@@ -208,8 +208,8 @@
       <!-- LOGIN FORM -->
       <form id="loginForm" onsubmit="handleLogin(event)">
         <div class="form-group">
-          <label>Institutional / Student Email</label>
-          <input type="email" id="loginEmail" placeholder="e.g., student@cspc.edu.ph" required />
+          <label>CSPC Email</label>
+          <input type="email" id="loginEmail" placeholder="e.g., student@my.cspc.edu.ph" pattern="[^\s@]+@my\.cspc\.edu\.ph" title="Use your CSPC email address ending in @my.cspc.edu.ph" required />
         </div>
         <div class="form-group">
           <label>Password</label>
@@ -224,8 +224,8 @@
 
         <div class="demo-creds">
           <strong>Demo Accounts Available:</strong><br />
-          Admin / SAO: <code>admin@cspc.edu.ph</code> (Password: <code>AdminPassword123!</code>)<br />
-          Student: <code>student@cspc.edu.ph</code> (Password: <code>StudentPassword123!</code>)
+          Admin / SAO: <code>admin@my.cspc.edu.ph</code> (Password: <code>AdminPassword123!</code>)<br />
+          Student: <code>student@my.cspc.edu.ph</code> (Password: <code>StudentPassword123!</code>)
         </div>
       </form>
 
@@ -251,8 +251,8 @@
           </select>
         </div>
         <div class="form-group">
-          <label>Institutional Email *</label>
-          <input type="email" id="regEmail" placeholder="e.g., maria.santos@cspc.edu.ph" required />
+          <label>CSPC Email *</label>
+          <input type="email" id="regEmail" placeholder="e.g., maria.santos@my.cspc.edu.ph" pattern="[^\s@]+@my\.cspc\.edu\.ph" title="Use your CSPC email address ending in @my.cspc.edu.ph" required />
         </div>
         <div class="form-group">
           <label>Password (min 6 characters) *</label>
