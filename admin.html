@@ -189,14 +189,6 @@
     .admin-navbar .navbar-container { max-width: 1280px; }
     .admin-navbar .nav-links { gap: .8rem; }
     .admin-navbar .nav-links a { font-size: .78rem; }
-    .admin-navbar .nav-links a:hover { background: rgba(59,130,246,.08); border-radius: 6px; }
-    .admin-navbar .nav-links a.nav-active {
-      border-bottom: 0;
-      border-radius: 6px;
-      padding: 0 .55rem;
-      color: var(--blue-main);
-      background: rgba(59,130,246,.12);
-    }
     .admin-navbar .nav-actions { gap: .5rem; }
     .admin-profile { gap: .5rem; }
     .admin-profile .user-name { max-width: 150px; }
@@ -370,10 +362,16 @@
   <script>
     let deleteTargetId = null;
     let activeTab = 'items';
+    let adminItems = [];
+    let adminRefreshInProgress = false;
 
     document.addEventListener('DOMContentLoaded', () => {
       initNav();
-      renderAdminPanel();
+      refreshAdminItems();
+      window.addEventListener('storage', event => {
+        if (event.key === STORAGE_KEY || event.key === null) refreshAdminItems();
+      });
+      window.setInterval(refreshAdminItems, 5000);
 
       document.getElementById('adminClaimsNavLink').addEventListener('click', event => {
         event.preventDefault();
@@ -414,8 +412,49 @@
       });
     });
 
-    function renderAdminPanel() {
-      const items = getItems();
+    function normalizeAdminItem(item) {
+      const normalized = { ...item };
+      normalized.status = item.status || item.type || 'pending';
+      normalized.desc = item.desc || item.description || '';
+      normalized.description = item.description || item.desc || '';
+      normalized.reporterName = item.reporterName || item.contact || '—';
+      normalized.reporterContact = item.reporterContact || item.contact || item.reporterEmail || '';
+      normalized.dateLost = item.dateLost || (item.type === 'lost' ? item.date || item.createdAt : '');
+      normalized.dateFound = item.dateFound || (item.type === 'found' ? item.date || item.createdAt : '');
+      return normalized;
+    }
+
+    async function refreshAdminItems() {
+      if (adminRefreshInProgress) return;
+      adminRefreshInProgress = true;
+      const localItems = getItems()
+        .filter(item => item.type !== 'registered')
+        .map(normalizeAdminItem);
+      adminItems = localItems;
+      renderAdminPanel(adminItems);
+
+      try {
+        const response = await fetch('/api/items', { cache: 'no-store' });
+        if (!response.ok) return;
+        const data = await response.json();
+        if (!data.success || !Array.isArray(data.items)) return;
+
+        const mergedItems = new Map(localItems.map(item => [String(item.id), item]));
+        data.items
+          .filter(item => item.type !== 'registered')
+          .map(normalizeAdminItem)
+          .forEach(item => mergedItems.set(String(item.id), item));
+        adminItems = [...mergedItems.values()];
+        renderAdminPanel(adminItems);
+      } catch (error) {
+        // Keep the localStorage view available when the API is offline.
+      } finally {
+        adminRefreshInProgress = false;
+      }
+    }
+
+    function renderAdminPanel(items = adminItems) {
+      adminItems = items;
       const lost    = items.filter(i => i.type==='lost').length;
       const found   = items.filter(i => i.type==='found').length;
       const claimed = items.filter(i => i.status==='claimed').length;
@@ -480,7 +519,7 @@
     }
 
     function renderItemsTable() {
-      let items = getItems();
+      let items = adminItems.slice();
       const q  = document.getElementById('adminSearch').value.toLowerCase().trim();
       const ft = document.getElementById('adminFilterType').value;
       const fs = document.getElementById('adminFilterStatus').value;
@@ -488,10 +527,14 @@
       if (q)  items = items.filter(i =>
         (i.title||'').toLowerCase().includes(q) ||
         (i.reporterName||'').toLowerCase().includes(q) ||
-        (i.category||'').toLowerCase().includes(q)
+        (i.reporterContact||'').toLowerCase().includes(q) ||
+        (i.reporterEmail||'').toLowerCase().includes(q) ||
+        (i.category||'').toLowerCase().includes(q) ||
+        (i.location||'').toLowerCase().includes(q) ||
+        (i.desc||'').toLowerCase().includes(q)
       );
       if (ft) items = items.filter(i => i.type   === ft);
-      if (fs) items = items.filter(i => i.status === fs);
+      if (fs) items = items.filter(i => i.status === fs || (['lost', 'found'].includes(fs) && i.type === fs));
 
       // Sort newest first
       items.sort((a,b) => new Date(b.createdAt)-new Date(a.createdAt));
@@ -569,13 +612,13 @@
 
     function markClaimed(id) {
       updateItemStatus(id, 'claimed');
-      renderAdminPanel();
+      refreshAdminItems();
       showToast('Item marked as claimed.');
     }
     function markRestore(id) {
       const item = getItemById(id);
       if (item) updateItemStatus(id, item.type);
-      renderAdminPanel();
+      refreshAdminItems();
       showToast('Item status restored.');
     }
 
@@ -593,7 +636,7 @@
       if (deleteTargetId) {
         deleteItem(deleteTargetId);
         closeDeleteModal();
-        renderAdminPanel();
+        refreshAdminItems();
         showToast('Item deleted successfully.');
       }
     }
