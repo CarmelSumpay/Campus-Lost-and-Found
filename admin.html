@@ -42,10 +42,13 @@
     /* ── Admin Stats ── */
     .admin-stats {
       display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(160px,1fr));
-      gap: 1rem;
-      margin-bottom: 2rem;
+      grid-template-columns: repeat(6, minmax(0, 1fr));
+      gap: .75rem;
+      margin-bottom: 1.25rem;
     }
+    .admin-stats .stat-card { padding: 1rem 1.1rem; border-radius: 8px; gap: .4rem; }
+    .admin-stats .stat-number { font-size: 1.75rem; }
+    .admin-tabs { margin-bottom: 1rem; }
 
     /* ── Table ── */
     .admin-table-wrap {
@@ -58,7 +61,7 @@
       border-collapse: collapse;
       font-size: .84rem;
     }
-    #adminItemsTable { width: 110%; table-layout: fixed; }
+    #adminItemsTable { width: 100%; min-width: 1180px; table-layout: fixed; }
     #adminItemsTable th,
     #adminItemsTable td {
       overflow: visible;
@@ -68,6 +71,7 @@
       padding: 12px 10px;
     }
     #adminItemsTable .actions-cell { overflow: visible; text-overflow: clip; white-space: normal; }
+    #adminItemsTable .status-cell .badge { white-space: nowrap; word-break: normal; }
     .admin-pagination {
       display: flex;
       align-items: center;
@@ -175,17 +179,19 @@
 
     /* ── Search in admin ── */
     .admin-search-row {
-      display: flex;
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
       gap: .75rem;
-      flex-wrap: wrap;
       margin-bottom: 1.25rem;
       align-items: center;
     }
     .admin-search-row .form-control {
-      max-width: 300px;
-      padding-left: 2.2rem;
+      width: 100%;
+      max-width: none;
+      padding-left: .9rem;
     }
-    .admin-search-wrap { position: relative; flex: 1; max-width: 300px; }
+    .admin-search-wrap { position: relative; min-width: 0; }
+    .admin-search-row #exportBtn { width: 100%; }
     .admin-search-wrap .search-icon {
       position: absolute;
       left: .75rem; top: 50%;
@@ -231,20 +237,28 @@
     .admin-profile { gap: .5rem; }
     .admin-profile .user-name { max-width: 150px; }
     .admin-nav-bell { width: auto; min-width: 72px; padding: 0 .65rem; }
-    #adminPanel .page-header h1 {
-      font-size: 2.8rem;
-      font-weight: 800;
-      background: linear-gradient(135deg, #3b82f6 0%, #60a5fa 50%, #93c5fd 100%);
-      background-size: 160% 160%;
-      background-position: 0% 50%;
-      background-clip: text;
-      -webkit-background-clip: text;
-      color: transparent;
-      -webkit-text-fill-color: transparent;
-      transition: background-position .35s ease;
+    #adminPanel .page-section {
+      width: calc(100% - 2rem);
+      max-width: 1600px;
+      margin-inline: auto;
+      padding-inline: 0;
+      box-sizing: border-box;
     }
-    #adminPanel .page-header h1:hover {
-      background-position: 100% 50%;
+    #adminPanel > .page-header {
+      width: calc(100% - 2rem);
+      max-width: 1600px;
+      margin-inline: auto;
+      padding: 2rem 0 1rem;
+      text-align: left;
+      box-sizing: border-box;
+    }
+    #adminItemsTable { min-width: 0; }
+    #adminPanel .page-header h1 {
+      font-size: 2.2rem;
+      font-weight: 800;
+      background: none;
+      color: var(--blue-main);
+      -webkit-text-fill-color: var(--blue-main);
     }
     #adminLogoutModal {
       position: fixed;
@@ -259,6 +273,10 @@
     #adminLogoutModal.open { display: flex; }
 
     @media (max-width: 560px) {
+      .admin-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .admin-search-row { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      #adminPanel > .page-header { padding-top: 1.5rem; }
+      #adminPanel .page-header h1 { font-size: 1.8rem; }
       .admin-navbar .navbar-container { flex-wrap: wrap; gap: .35rem; padding: .45rem .75rem; }
       .admin-navbar .nav-actions { width: 100%; justify-content: flex-end; flex-wrap: wrap; }
       .admin-navbar .nav-links { top: 100%; }
@@ -269,6 +287,13 @@
 
     @media (max-width: 600px) {
       th, td { padding: .6rem .65rem; font-size: .78rem; }
+    }
+    @media (max-width: 360px) {
+      .admin-stats { grid-template-columns: 1fr; }
+      .admin-search-row { grid-template-columns: 1fr; }
+    }
+    @media (min-width: 561px) and (max-width: 900px) {
+      .admin-stats { grid-template-columns: repeat(3, minmax(0, 1fr)); }
     }
   </style>
 </head>
@@ -294,9 +319,8 @@
         <button type="button" class="notif-bell-btn admin-nav-bell" id="adminNotificationBtn" onclick="openAdminClaims()" title="Open pending claims" aria-label="Open pending claims">
           Claims <span class="notif-badge" id="adminNotificationBadge" style="display:none;">0</span>
         </button>
-        <div class="user-pill admin-profile" aria-label="Signed in as CSPC Administrator, SAO Admin">
-          <span class="user-name">CSPC Administrator</span>
-          <span class="role-badge">SAO ADMIN</span>
+        <div class="user-pill admin-profile" aria-label="Signed in as CSPC Admin">
+          <span class="user-name">CSPC Admin</span>
           <button type="button" class="user-pill-logout" onclick="openAdminLogoutModal()" title="Sign out of administrator account">Logout</button>
         </div>
         <button type="button" class="menu-toggle" id="menuToggle" aria-label="Toggle admin navigation menu">
@@ -338,15 +362,15 @@
       <!-- ITEMS TAB -->
       <div id="tabItems">
         <div class="admin-search-row">
-          <div class="admin-search-wrap" style="max-width: 340px;">
-            <input type="text" class="form-control" id="adminSearch" placeholder="Search items…" style="padding-left: 0.9rem;" />
+          <div class="admin-search-wrap">
+            <input type="text" class="form-control" id="adminSearch" placeholder="Search items…" />
           </div>
-          <select class="form-control" id="adminFilterType" style="max-width:160px;">
+          <select class="form-control" id="adminFilterType">
             <option value="">All Types</option>
             <option value="lost">Lost</option>
             <option value="found">Found</option>
           </select>
-          <select class="form-control" id="adminFilterStatus" style="max-width:160px;">
+          <select class="form-control" id="adminFilterStatus">
             <option value="">All Statuses</option>
             <option value="lost">Lost</option>
             <option value="found">Found</option>
@@ -358,14 +382,14 @@
           <table id="adminItemsTable">
             <colgroup>
               <col style="width:5%" />
+              <col style="width:14%" />
+              <col style="width:8%" />
+              <col style="width:11%" />
               <col style="width:18%" />
-              <col style="width:10%" />
-              <col style="width:12%" />
-              <col style="width:20%" />
-              <col style="width:15%" />
-              <col style="width:10%" />
-              <col style="width:10%" />
-              <col style="width:10%" />
+              <col style="width:16%" />
+              <col style="width:9%" />
+              <col style="width:8%" />
+              <col style="width:11%" />
             </colgroup>
             <thead>
               <tr>
@@ -635,7 +659,7 @@
           <td title="${escHtml(item.location)}">${escHtml(item.location)}</td>
           <td title="${escHtml(`${item.reporterName} ${item.reporterContact}`)}">${escHtml(item.reporterName)}<br><span style="font-size:.72rem;">${escHtml(item.reporterContact)}</span></td>
           <td title="${escHtml(date)}">${date}</td>
-          <td title="${escHtml(item.status)}">${statusBadge(item.status)}</td>
+          <td class="status-cell" title="${escHtml(item.status)}">${statusBadge(item.status)}</td>
           <td class="actions-cell">
             <div style="display:flex;gap:.35rem;flex-wrap:wrap;">
               ${canClaim   ? `<button class="action-btn action-btn-claim"   onclick="markClaimed('${item.id}')">Mark Claimed</button>` : ''}
@@ -753,12 +777,30 @@
       document.getElementById('deleteModal').classList.remove('open');
       deleteTargetId = null;
     }
-    function doDelete() {
-      if (deleteTargetId) {
-        deleteItem(deleteTargetId);
+    async function doDelete() {
+      if (!deleteTargetId) return;
+
+      const id = deleteTargetId;
+      const button = document.getElementById('confirmDelete');
+      button.disabled = true;
+      try {
+        const response = await fetch(`/api/items/${encodeURIComponent(id)}`, {
+          method: 'DELETE',
+          credentials: 'same-origin'
+        });
+        const data = await response.json();
+        if (!response.ok && response.status !== 404) {
+          throw new Error(data.message || 'Unable to delete item. Please try again.');
+        }
+
+        deleteItem(id);
         closeDeleteModal();
-        refreshAdminItems();
-        showToast('Item deleted successfully.');
+        await refreshAdminItems();
+        showToast('Item permanently deleted.');
+      } catch (error) {
+        showToast(error.message || 'Unable to delete item. Please try again.', 'error');
+      } finally {
+        button.disabled = false;
       }
     }
 

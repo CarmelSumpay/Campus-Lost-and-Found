@@ -34,100 +34,6 @@ const LOCATIONS = [
   'Other',
 ];
 
-/* ── Seed Data ── */
-const SEED_ITEMS = [
-  {
-    id: 'seed-001',
-    type: 'lost',
-    title: 'Black Samsung Galaxy A54',
-    category: 'Electronics',
-    description: 'Black Samsung Galaxy A54 with a cracked screen protector. Has a dark green rubber case. Last seen near the Engineering Building restroom.',
-    dateLost: '2026-09-10',
-    location: 'Engineering Building',
-    reporterName: 'Maria Santos',
-    reporterContact: '09171234567',
-    reporterEmail: 'maria.santos@my.cspc.edu.ph',
-    status: 'lost',
-    createdAt: '2026-09-10T08:32:00',
-    imageUrl: '',
-  },
-  {
-    id: 'seed-002',
-    type: 'found',
-    title: 'Blue Jansport Backpack',
-    category: 'Bags & Wallets',
-    description: 'Blue Jansport backpack found near the library entrance. Contains books and a pencil case inside.',
-    dateFound: '2026-09-11',
-    location: 'Library',
-    reporterName: 'Jose Reyes',
-    reporterContact: '09281234567',
-    reporterEmail: 'jose.reyes@my.cspc.edu.ph',
-    status: 'found',
-    createdAt: '2026-09-11T10:15:00',
-    imageUrl: '',
-  },
-  {
-    id: 'seed-003',
-    type: 'lost',
-    title: 'CSPC Student ID — Ana Lim',
-    category: 'ID / Cards',
-    description: 'CSPC student ID belonging to Ana Lim, Course: BSIT-2A. Please return to admin office or contact owner.',
-    dateLost: '2026-09-12',
-    location: 'Cafeteria / Canteen',
-    reporterName: 'Ana Lim',
-    reporterContact: '09331234567',
-    reporterEmail: 'ana.lim@my.cspc.edu.ph',
-    status: 'lost',
-    createdAt: '2026-09-12T12:45:00',
-    imageUrl: '',
-  },
-  {
-    id: 'seed-004',
-    type: 'found',
-    title: 'Set of Keys (3 keys, red lanyard)',
-    category: 'Keys',
-    description: 'Found a set of 3 keys on a red lanyard near the gymnasium entrance. Appears to be house/room keys.',
-    dateFound: '2026-09-12',
-    location: 'Gymnasium',
-    reporterName: 'Security Guard - Post 2',
-    reporterContact: '09451234567',
-    reporterEmail: 'security@my.cspc.edu.ph',
-    status: 'found',
-    createdAt: '2026-09-12T14:00:00',
-    imageUrl: '',
-  },
-  {
-    id: 'seed-005',
-    type: 'found',
-    title: 'Casio Scientific Calculator (FX-991ES)',
-    category: 'Electronics',
-    description: 'White Casio FX-991ES Plus scientific calculator found in the Computer Laboratory, Room 204. Name written inside: "R. Cruz".',
-    dateFound: '2026-09-13',
-    location: 'Computer Laboratory',
-    reporterName: 'Lab Instructor',
-    reporterContact: '09561234567',
-    reporterEmail: 'lab@my.cspc.edu.ph',
-    status: 'claimed',
-    createdAt: '2026-09-13T09:20:00',
-    imageUrl: '',
-  },
-  {
-    id: 'seed-006',
-    type: 'lost',
-    title: 'Silver Bracelet with Name Engraving',
-    category: 'Jewelry',
-    description: 'Silver bracelet with "Sofia" engraved on it. Lost somewhere between the Admin Office and the Main Building lobby.',
-    dateLost: '2026-09-13',
-    location: 'Main Building',
-    reporterName: 'Sofia Dela Cruz',
-    reporterContact: '09671234567',
-    reporterEmail: 'sofia.delacruz@my.cspc.edu.ph',
-    status: 'lost',
-    createdAt: '2026-09-13T13:10:00',
-    imageUrl: '',
-  },
-];
-
 /* ══════════════════════════════════
    STORAGE HELPERS
    ══════════════════════════════════ */
@@ -178,7 +84,7 @@ function updateItemStatus(id, status) {
 }
 
 function deleteItem(id) {
-  const items = getItems().filter(i => i.id !== id);
+  const items = getItems().filter(i => String(i.id) !== String(id));
   saveItems(items);
 }
 
@@ -206,9 +112,9 @@ function updateClaimStatus(id, status) {
    ══════════════════════════════════ */
 
 function initSeeds() {
-  if (localStorage.getItem('cspc_seeded')) return;
-  saveItems(SEED_ITEMS);
-  localStorage.setItem('cspc_seeded', '1');
+  const items = getItems();
+  const userItems = items.filter(item => !String(item.id).startsWith('seed-'));
+  if (userItems.length !== items.length) saveItems(userItems);
 }
 
 /* ══════════════════════════════════

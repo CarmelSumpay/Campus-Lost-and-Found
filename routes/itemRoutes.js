@@ -437,20 +437,11 @@ router.patch('/:id/claim', (req, res) => {
 });
 
 // DELETE /api/items/:id - Remove item (Admin or original reporter)
-router.delete('/:id', (req, res) => {
+router.delete('/:id', requireRole('admin'), (req, res) => {
   let items = getItems();
   const item = items.find(i => String(i.id) === String(req.params.id));
   if (!item) {
     return res.status(404).json({ success: false, message: 'Item not found.' });
-  }
-
-  // Check permission: if logged in as admin or as the reporter
-  const user = req.session?.user;
-  if (user && user.role !== 'admin' && item.reportedBy !== user.id) {
-    return res.status(403).json({
-      success: false,
-      message: 'You do not have permission to delete this report.'
-    });
   }
 
   items = items.filter(i => String(i.id) !== String(req.params.id));

@@ -620,14 +620,14 @@
     <div class="hotspots-row">
       <span style="font-weight: 700; color: var(--blue-dark); text-transform: uppercase; font-size: 0.7rem; letter-spacing: 0.05em;">CSPC Offices &amp; Areas:</span>
       <button class="hotspot-chip active" onclick="setLocationFilter('', this)">All Offices</button>
-      <button class="hotspot-chip" onclick="setLocationFilter('Engineering', this)">CEA (College of Engineering and Architecture)</button>
-        <button class="hotspot-chip" onclick="setLocationFilter('Computer Studies', this)">CCS (College of Computer Studies)</button>
-      <button class="hotspot-chip" onclick="setLocationFilter('Library', this)">Library</button>
-      <button class="hotspot-chip" onclick="setLocationFilter('Student Affairs', this)">Student Affairs Office (SASO)</button>
-      <button class="hotspot-chip" onclick="setLocationFilter('Health Services', this)">Clinic</button>
-      <button class="hotspot-chip" onclick="setLocationFilter('Sports', this)">Gymnasium</button>
-      <button class="hotspot-chip" onclick="setLocationFilter('Administration', this)">Administration</button>
-      <button class="hotspot-chip" onclick="setLocationFilter('Production', this)">Canteen</button>
+      <button class="hotspot-chip" onclick="setLocationFilter('College of Computer Studies (CCS)', this)">College of Computer Studies (CCS)</button>
+      <button class="hotspot-chip" onclick="setLocationFilter('College of Engineering and Architecture (CEA)', this)">College of Engineering and Architecture (CEA)</button>
+      <button class="hotspot-chip" onclick="setLocationFilter('College of Health Sciences (CHS)', this)">College of Health Sciences (CHS)</button>
+      <button class="hotspot-chip" onclick="setLocationFilter('College of Tourism, Hospitality and Business Management (CTHBM)', this)">College of Tourism, Hospitality and Business Management (CTHBM)</button>
+      <button class="hotspot-chip" onclick="setLocationFilter('College of Technological and Developmental Education (CTDE)', this)">College of Technological and Developmental Education (CTDE)</button>
+      <button class="hotspot-chip" onclick="setLocationFilter('College of Arts and Sciences (CAS)', this)">College of Arts and Sciences (CAS)</button>
+      <button class="hotspot-chip" onclick="setLocationFilter('Graduate School', this)">Graduate School</button>
+      <button class="hotspot-chip" onclick="setLocationFilter('Buhi Campus', this)">Buhi Campus</button>
     </div>
 
     <!-- Items Grid -->
@@ -1172,75 +1172,6 @@
   <script>
     const STORAGE_KEY = 'cspc_simple_lostfound_v2';
 
-    // Default sample data with official CSPC reference tracking codes
-    const INITIAL_ITEMS = [
-      {
-        id: 1,
-        refCode: "CSPC-LF-2026-001",
-        title: "Casio FX-991ES Scientific Calculator",
-        category: "Electronics",
-        type: "lost",
-        location: "College of Engineering and Architecture (CEA) (Room 302)",
-        contact: "Juan Dela Cruz (0917-111-2233)",
-        desc: "Silver cover with name sticker on the back. Lost during morning class.",
-        verification: "Student ID number etched inside battery lid",
-        date: "Sep 12, 2026",
-        claimed: false
-      },
-      {
-        id: 2,
-        refCode: "CSPC-LF-2026-002",
-        title: "Blue Jansport Backpack",
-        category: "Bags & Wallets",
-        type: "found",
-        location: "Learning Resources and Development (Library) (Study Area)",
-        contact: "Turned over to Library Front Desk",
-        desc: "Contains notebooks and a pencil case. Can be claimed at the library counter.",
-        verification: "Chemistry notebook inside front pocket",
-        date: "Sep 13, 2026",
-        claimed: false
-      },
-      {
-        id: 3,
-        refCode: "CSPC-LF-2026-003",
-        title: "CSPC Student ID Card",
-        category: "ID / Cards",
-        type: "lost",
-        location: "Production and Auxiliary Services (Canteen / Commercial)",
-        contact: "Maria Santos (BSIT 3B)",
-        desc: "Lost near the beverage station around lunch time.",
-        verification: "ID number starts with 2024-",
-        date: "Sep 13, 2026",
-        claimed: true
-      },
-      {
-        id: 4,
-        refCode: "CSPC-LF-2026-004",
-        title: "Key Ring with 3 Keys & Red Lanyard",
-        category: "Keys",
-        type: "found",
-        location: "Sports Development Unit (Gymnasium) (Bleachers)",
-        contact: "Security Guard Post 1",
-        desc: "Found after intramural practice. Inquire at the main gate.",
-        verification: "Small brass padlock key attached",
-        date: "Sep 14, 2026",
-        claimed: false
-      },
-      {
-        id: 5,
-        refCode: "CSPC-LF-2026-005",
-        title: "Casio Scientific Calculator FX-991ES",
-        category: "Electronics",
-        type: "found",
-        location: "College of Engineering and Architecture (CEA) (Ground Floor)",
-        contact: "Turned over to CE Dept Office",
-        desc: "Found on the bench outside CE laboratory. Silver case.",
-        verification: "Has initials JDC on battery compartment",
-        date: "Sep 14, 2026",
-        claimed: false
-      }
-    ];
-
     let currentFilter = 'all';
     let currentLocationFilter = '';
     let currentPage = 1;
@@ -1249,10 +1180,17 @@
     function getItems() {
       const saved = localStorage.getItem(STORAGE_KEY);
       if (!saved) {
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(INITIAL_ITEMS));
-        return INITIAL_ITEMS;
+        localStorage.setItem(STORAGE_KEY, JSON.stringify([]));
+        return [];
       }
-      const items = JSON.parse(saved);
+      const savedItems = JSON.parse(saved);
+      const items = savedItems.filter(item => {
+        const sampleRefCode = `CSPC-LF-2026-${String(item.id).padStart(3, '0')}`;
+        return !(Number.isInteger(item.id) && item.id >= 1 && item.id <= 5 && item.refCode === sampleRefCode);
+      });
+      if (items.length !== savedItems.length) {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(items));
+      }
       // Ensure all items have refCodes
       items.forEach((item, idx) => {
         if (!item.refCode) {

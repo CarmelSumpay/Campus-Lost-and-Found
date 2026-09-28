@@ -102,10 +102,12 @@
     "desc": "Mahirap pala ang mawala ang sarili.",
     "verification": "",
     "date": "Sep 19, 2026",
-    "status": "active",
-    "claimed": false,
+    "status": "claimed",
+    "claimed": true,
     "reportedBy": "guest",
-    "createdAt": "2026-09-19T07:09:48.743Z"
+    "createdAt": "2026-09-19T07:09:48.743Z",
+    "claimedAt": "2026-09-28T07:45:46.026Z",
+    "claimantProof": "Verified by SAO Officer / Finder"
   },
   {
     "id": 1789801208915,
@@ -280,24 +282,5 @@
     "claimed": true,
     "reportedBy": "usr-student-01",
     "createdAt": "2026-09-13T12:45:00.000Z"
-  },
-  {
-    "id": 5,
-    "refCode": "CSPC-LF-2026-005",
-    "title": "Casio Scientific Calculator FX-991ES",
-    "category": "Electronics",
-    "type": "found",
-    "location": "College of Engineering and Architecture (CEA)",
-    "locationDetails": "Bench outside CE lab",
-    "contact": "Turned over to CE Dept Office",
-    "desc": "Found on the bench outside CE laboratory. Silver case.",
-    "verification": "Has initials JDC on battery compartment",
-    "date": "Sep 14, 2026",
-    "status": "claimed",
-    "claimed": true,
-    "reportedBy": "usr-admin-01",
-    "createdAt": "2026-09-14T08:45:00.000Z",
-    "claimedAt": "2026-09-19T06:10:31.720Z",
-    "claimantProof": "Verified by SAO Officer / Finder"
   }
 ]
