@@ -83,12 +83,12 @@
     "desc": "html java",
     "verification": "",
     "date": "Sep 19, 2026",
-    "status": "claimed",
-    "claimed": true,
+    "status": "active",
+    "claimed": false,
     "reportedBy": "guest",
     "createdAt": "2026-09-19T07:10:54.592Z",
-    "claimedAt": "2026-09-19T07:46:52.637Z",
-    "claimantProof": "nakuha ko na po"
+    "claimedAt": null,
+    "claimantProof": null
   },
   {
     "id": 1789801788667,
@@ -229,23 +229,6 @@
     "claimed": false,
     "reportedBy": "guest",
     "createdAt": "2026-09-19T06:40:02.506Z"
-  },
-  {
-    "id": 1789799736642,
-    "refCode": "CSPC-LF-2026-005",
-    "title": "Pera",
-    "category": "Others",
-    "type": "lost",
-    "location": "College of Tourism, Hospitality and Business Management (CTHBM) (IT Lab 2)",
-    "locationDetails": "IT Lab 2",
-    "contact": "Anika (anagravante@my.cspc.edu.ph)",
-    "desc": "100 pesos",
-    "verification": "",
-    "date": "Sep 19, 2026",
-    "status": "active",
-    "claimed": false,
-    "reportedBy": "usr-1789797986739",
-    "createdAt": "2026-09-19T06:35:36.669Z"
   },
   {
     "id": 1789798111996,
