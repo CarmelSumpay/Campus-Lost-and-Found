@@ -4,8 +4,6 @@
 
 const STORAGE_KEY = 'cspc_lostfound_items';
 const CLAIMS_KEY  = 'cspc_lostfound_claims';
-const ADMIN_PIN   = '1234';
-
 /* ── Categories ── */
 const CATEGORIES = [
   'Electronics',

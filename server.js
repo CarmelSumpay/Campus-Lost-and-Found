@@ -37,6 +37,16 @@ app.use('/api/auth', authRoutes);
 app.use('/api/items', itemRoutes);
 app.use('/api/stats', (req, res) => res.redirect('/api/items/stats'));
 
+app.get('/admin.html', (req, res) => {
+  if (!req.session?.user) {
+    return res.redirect('/login?redirect=/admin.html');
+  }
+  if (req.session.user.role !== 'admin') {
+    return res.redirect('/');
+  }
+  res.sendFile(path.join(__dirname, 'admin.html'));
+});
+
 // Static assets (CSS, logo, client JS)
 app.use(express.static(path.join(__dirname, 'public')));
 app.use(express.static(__dirname)); // fallback to root
@@ -63,6 +73,8 @@ app.use((err, req, res, next) => {
     message: 'An unexpected server error occurred.'
   });
 });
+
+authRoutes.ensureAdminAccount();
 
 app.listen(PORT, () => {
   console.log(` Server running at: http://localhost:${PORT}`);

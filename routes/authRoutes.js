@@ -21,6 +21,26 @@ function saveUsers(users) {
   fs.writeFileSync(USERS_FILE, JSON.stringify(users, null, 2), 'utf8');
 }
 
+function ensureAdminAccount() {
+  const users = getUsers();
+  const adminEmail = 'admin@cspc.edu.ph';
+
+  if (users.some(user => user.email.toLowerCase() === adminEmail)) return;
+
+  users.push({
+    id: 'usr-admin-01',
+    email: adminEmail,
+    passwordHash: '$2a$10$D07/af8VBHl4SdhK5Fnhku9fnsUFTkBTCop4S.egyvfO//siDrfm.',
+    fullName: 'CSPC Administrator',
+    studentId: 'N/A',
+    role: 'admin',
+    department: 'Student Affairs and Services Office',
+    createdAt: new Date().toISOString()
+  });
+
+  saveUsers(users);
+}
+
 // POST /api/auth/register
 router.post('/register', validateUserAuth, async (req, res) => {
   try {
@@ -139,7 +159,7 @@ router.post('/logout', (req, res) => {
     if (err) {
       return res.status(500).json({ success: false, message: 'Could not log out.' });
     }
-    res.clearCookie('connect.sid');
+    res.clearCookie('cspc.sid');
     res.json({ success: true, message: 'Logged out successfully.' });
   });
 });
@@ -157,5 +177,7 @@ router.get('/me', (req, res) => {
     user: null
   });
 });
+
+router.ensureAdminAccount = ensureAdminAccount;
 
 module.exports = router;

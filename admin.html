@@ -14,52 +14,7 @@
     })();
   </script>
   <style>
-    /* ── PIN Gate ── */
-    .pin-gate {
-      min-height: calc(100vh - 60px);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      padding: 2rem;
-      position: relative;
-      z-index: 1;
-    }
-    .pin-card {
-      background: var(--card-bg);
-      border: 1px solid var(--border);
-      border-radius: 20px;
-      padding: 2.5rem;
-      max-width: 380px;
-      width: 100%;
-      text-align: center;
-    }
-    .pin-icon { font-size: 3rem; margin-bottom: 1rem; }
-    .pin-card h2 {
-      font-size: 1.2rem;
-      font-weight: 900;
-      color: var(--text-main);
-      text-transform: none;
-      letter-spacing: 0;
-      margin-bottom: 0.4rem;
-    }
-    .pin-card p { font-size: .85rem; color: var(--text-muted); margin-bottom: 1.5rem; }
-    .pin-input {
-      font-size: 1.8rem;
-      letter-spacing: .6rem;
-      text-align: center;
-      font-weight: 900;
-      width: 100%;
-    }
-    .pin-error {
-      color: #f87171;
-      font-size: .8rem;
-      margin-top: .5rem;
-      display: none;
-    }
-
     /* ── Admin Panel ── */
-    #adminPanel { display: none; }
-
     .admin-tabs {
       display: flex;
       gap: .5rem;
@@ -103,6 +58,44 @@
       border-collapse: collapse;
       font-size: .84rem;
     }
+    #adminItemsTable { width: 110%; table-layout: fixed; }
+    #adminItemsTable th,
+    #adminItemsTable td {
+      overflow: visible;
+      text-overflow: clip;
+      white-space: normal;
+      word-break: break-word;
+      padding: 12px 10px;
+    }
+    #adminItemsTable .actions-cell { overflow: visible; text-overflow: clip; white-space: normal; }
+    .admin-pagination {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1rem;
+      flex-wrap: wrap;
+      padding: .85rem 1rem;
+      border: 1px solid var(--border);
+      border-top: 0;
+      border-radius: 0 0 12px 12px;
+    }
+    .pagination-summary { color: var(--text-muted); font-size: .78rem; }
+    .pagination-controls { display: flex; align-items: center; gap: .35rem; flex-wrap: wrap; }
+    .pagination-button {
+      min-width: 34px;
+      height: 34px;
+      padding: 0 .55rem;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      background: transparent;
+      color: var(--text-muted);
+      font-size: .78rem;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    .pagination-button:hover:not(:disabled),
+    .pagination-button.active { color: var(--blue-main); border-color: var(--blue-main); }
+    .pagination-button:disabled { opacity: .45; cursor: not-allowed; }
     thead tr {
       background: rgba(59,130,246,0.06);
       border-bottom: 1px solid var(--border);
@@ -231,32 +224,100 @@
     [data-theme='light'] .del-modal h3 { color: #dc2626; }
     [data-theme='light'] .del-modal p  { color: #475569; }
 
+    .admin-navbar .navbar-container { max-width: 1280px; }
+    .admin-navbar .nav-links { gap: .8rem; }
+    .admin-navbar .nav-links a { font-size: .78rem; }
+    .admin-navbar .nav-actions { gap: .5rem; }
+    .admin-profile { gap: .5rem; }
+    .admin-profile .user-name { max-width: 150px; }
+    .admin-nav-bell { width: 36px; padding: 0; }
+    #adminPanel .page-header h1 {
+      font-size: 2.8rem;
+      font-weight: 800;
+      background: linear-gradient(135deg, #3b82f6 0%, #60a5fa 50%, #93c5fd 100%);
+      background-size: 160% 160%;
+      background-position: 0% 50%;
+      background-clip: text;
+      -webkit-background-clip: text;
+      color: transparent;
+      -webkit-text-fill-color: transparent;
+      transition: background-position .35s ease;
+    }
+    #adminPanel .page-header h1:hover {
+      background-position: 100% 50%;
+    }
+    #adminLogoutModal {
+      position: fixed;
+      inset: 0;
+      z-index: 2200;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 1rem;
+      background: rgba(0,0,0,.72);
+    }
+    #adminLogoutModal.open { display: flex; }
+
+    @media (max-width: 560px) {
+      .admin-navbar .navbar-container { flex-wrap: wrap; gap: .35rem; padding: .45rem .75rem; }
+      .admin-navbar .nav-actions { width: 100%; justify-content: flex-end; flex-wrap: wrap; }
+      .admin-navbar .nav-links { top: 100%; }
+      .admin-navbar .nav-logo-short { font-size: .72rem; }
+      .admin-profile .user-name { max-width: 105px; font-size: .7rem; }
+      .admin-profile { gap: .35rem; padding: 0 .5rem; }
+    }
+
     @media (max-width: 600px) {
       th, td { padding: .6rem .65rem; font-size: .78rem; }
     }
   </style>
 </head>
 <body>
-  <div id="navMount"></div>
-
-  <!-- PIN Gate -->
-  <div class="pin-gate" id="pinGate">
-    <div class="pin-card">
-      <div class="pin-icon">🛡️</div>
-      <h2>Admin Access</h2>
-      <p>Enter the 4-digit PIN to access the admin panel.</p>
-      <div class="form-group" style="position:relative;">
-        <input type="password" class="form-control pin-input" id="pinInput"
-          maxlength="4" placeholder="••••" inputmode="numeric" pattern="[0-9]*" style="padding-right:3.5rem;" />
-        <button type="button" id="pinToggleBtn" onclick="togglePinVisibility()" style="position:absolute;right:10px;top:50%;transform:translateY(-50%);background:rgba(59,130,246,0.12);border:1px solid rgba(59,130,246,0.3);color:var(--blue-main);border-radius:6px;padding:0.2rem 0.5rem;font-size:0.7rem;font-weight:700;cursor:pointer;">Show</button>
-        <div class="pin-error" id="pinError">Incorrect PIN. Please try again.</div>
+  <nav class="navbar admin-navbar" aria-label="Admin navigation">
+    <div class="navbar-container">
+      <a href="admin.html" class="nav-logo">
+        <img src="cspc-logo.png" alt="CSPC Logo" />
+        <span class="nav-logo-full">CSPC Lost &amp; Found Management System</span>
+        <span class="nav-logo-short">CSPC Lost &amp; Found Management System</span>
+      </a>
+      <div class="nav-links" id="navLinks">
+        <a href="admin.html" class="nav-active" aria-current="page">Dashboard</a>
+        <a href="#tabItems" data-admin-filter="">Browse</a>
+        <a href="#tabItems" data-admin-filter="lost">Report Lost</a>
+        <a href="#tabItems" data-admin-filter="found">Report Found</a>
+        <a href="#tabClaims" id="adminClaimsNavLink">Claim Requests</a>
       </div>
-      <button class="btn btn-primary" id="pinSubmit" style="width:100%;margin-top:1rem;">Enter</button>
-      <p style="font-size:.72rem;color:var(--text-muted);margin-top:1rem;">Default PIN: 1234</p>
+      <div class="nav-actions">
+        <button type="button" class="theme-toggle" id="themeToggleBtn" onclick="toggleTheme()" title="Toggle Theme" aria-label="Toggle theme">
+          <span class="theme-toggle-icon">🌙</span>
+        </button>
+        <button type="button" class="notif-bell-btn admin-nav-bell" id="adminNotificationBtn" onclick="openAdminClaims()" title="Open pending claims" aria-label="Open pending claims">
+          🔔 <span class="notif-badge" id="adminNotificationBadge" style="display:none;">0</span>
+        </button>
+        <div class="user-pill admin-profile" aria-label="Signed in as CSPC Administrator, SAO Admin">
+          <span class="user-name">CSPC Administrator</span>
+          <span class="role-badge">SAO ADMIN</span>
+          <button type="button" class="user-pill-logout" onclick="openAdminLogoutModal()" title="Sign out of administrator account">Logout</button>
+        </div>
+        <button type="button" class="menu-toggle" id="menuToggle" aria-label="Toggle admin navigation menu">
+          <span></span><span></span><span></span>
+        </button>
+      </div>
+    </div>
+  </nav>
+
+  <div class="slip-overlay" id="adminLogoutModal" onclick="if(event.target===this) closeAdminLogoutModal()">
+    <div style="background:#18181b;border:1px solid var(--border);border-radius:16px;padding:1.75rem;max-width:400px;width:90%;text-align:center;box-shadow:0 10px 40px rgba(0,0,0,.85);">
+      <div style="font-size:2.2rem;font-weight:700;color:var(--blue-main);margin-bottom:.5rem;">↪</div>
+      <h3 style="font-size:1.1rem;font-weight:800;color:var(--text-main);margin-bottom:.5rem;">Confirm Sign Out</h3>
+      <p style="font-size:.85rem;color:var(--text-muted);margin-bottom:1.25rem;">Are you sure you want to sign out?</p>
+      <div style="display:flex;gap:.75rem;justify-content:center;">
+        <button type="button" class="btn btn-outline" onclick="closeAdminLogoutModal()" style="padding:.5rem 1.25rem;">Cancel</button>
+        <button type="button" class="btn btn-primary" id="confirmAdminLogoutBtn" onclick="confirmAdminLogout()" style="padding:.5rem 1.25rem;">Sign Out</button>
+      </div>
     </div>
   </div>
 
-  <!-- Admin Panel (hidden until PIN correct) -->
   <div id="adminPanel">
     <div class="page-header">
       <h1>🛡️ Admin Panel</h1>
@@ -295,10 +356,21 @@
           <button class="btn btn-primary" id="exportBtn" style="font-size:.8rem;padding:.55rem 1rem;">⬇️ Export CSV</button>
         </div>
         <div class="admin-table-wrap">
-          <table>
+          <table id="adminItemsTable">
+            <colgroup>
+              <col style="width:5%" />
+              <col style="width:18%" />
+              <col style="width:10%" />
+              <col style="width:12%" />
+              <col style="width:20%" />
+              <col style="width:15%" />
+              <col style="width:10%" />
+              <col style="width:10%" />
+              <col style="width:10%" />
+            </colgroup>
             <thead>
               <tr>
-                <th>#</th>
+                <th title="Row number"># / ID</th>
                 <th>Item</th>
                 <th>Type</th>
                 <th>Category</th>
@@ -311,6 +383,10 @@
             </thead>
             <tbody id="adminTableBody"></tbody>
           </table>
+        </div>
+        <div class="admin-pagination" id="adminPagination" aria-label="Items table pagination">
+          <span class="pagination-summary" id="paginationSummary" aria-live="polite"></span>
+          <div class="pagination-controls" id="paginationControls"></div>
         </div>
         <div id="adminEmptyState" style="display:none;" class="empty-state">
           <div class="empty-state-icon">📭</div>
@@ -355,46 +431,31 @@
   <script>
     let deleteTargetId = null;
     let activeTab = 'items';
+    let adminItems = [];
+    let adminRefreshInProgress = false;
+    let adminItemsSignature = null;
+    let cachedServerItems = [];
+    const adminItemsPerPage = 10;
+    let adminCurrentPage = 1;
 
     document.addEventListener('DOMContentLoaded', () => {
-      document.getElementById('navMount').innerHTML = renderNav('admin.html');
       initNav();
+      refreshAdminItems();
+      window.addEventListener('storage', event => {
+        if (event.key === STORAGE_KEY || event.key === null) refreshAdminItems();
+      });
+      window.setInterval(refreshAdminItems, 5000);
 
-      // PIN logic
-      const pinInput  = document.getElementById('pinInput');
-      const pinSubmit = document.getElementById('pinSubmit');
-      const pinError  = document.getElementById('pinError');
-
-      function tryPin() {
-        if (pinInput.value === ADMIN_PIN) {
-          document.getElementById('pinGate').style.display = 'none';
-          document.getElementById('adminPanel').style.display = 'block';
-          renderAdminPanel();
-        } else {
-          pinError.style.display = 'block';
-          pinInput.value = '';
-          pinInput.focus();
-        }
-      }
-
-      pinSubmit.addEventListener('click', tryPin);
-      pinInput.addEventListener('keydown', e => { if (e.key === 'Enter') tryPin(); });
-      pinInput.addEventListener('input',   () => { pinError.style.display = 'none'; });
-
-      function togglePinVisibility() {
-      const input = document.getElementById('pinInput');
-      const btn = document.getElementById('pinToggleBtn');
-      if (!input) return;
-      if (input.type === 'password') {
-        input.type = 'text';
-        btn.innerText = 'Hide';
-        btn.style.color = '#fca5a5';
-      } else {
-        input.type = 'password';
-        btn.innerText = 'Show';
-        btn.style.color = 'var(--blue-main)';
-      }
-    }
+      document.getElementById('adminClaimsNavLink').addEventListener('click', event => {
+        event.preventDefault();
+        openAdminClaims();
+      });
+      document.querySelectorAll('[data-admin-filter]').forEach(link => {
+        link.addEventListener('click', event => {
+          event.preventDefault();
+          showAdminItems(link.dataset.adminFilter);
+        });
+      });
 
     // Tabs
       document.querySelectorAll('.admin-tab').forEach(tab => {
@@ -420,12 +481,61 @@
 
       // Reactive admin filters
       ['adminSearch','adminFilterType','adminFilterStatus'].forEach(id => {
-        document.getElementById(id).addEventListener('input', renderItemsTable);
+        document.getElementById(id).addEventListener('input', () => {
+          adminCurrentPage = 1;
+          renderItemsTable();
+        });
       });
     });
 
-    function renderAdminPanel() {
-      const items = getItems();
+    function normalizeAdminItem(item) {
+      const normalized = { ...item };
+      normalized.status = item.status || item.type || 'pending';
+      normalized.desc = item.desc || item.description || '';
+      normalized.description = item.description || item.desc || '';
+      normalized.reporterName = item.reporterName || item.contact || '—';
+      normalized.reporterContact = item.reporterContact || item.contact || item.reporterEmail || '';
+      normalized.dateLost = item.dateLost || (item.type === 'lost' ? item.date || item.createdAt : '');
+      normalized.dateFound = item.dateFound || (item.type === 'found' ? item.date || item.createdAt : '');
+      return normalized;
+    }
+
+    async function refreshAdminItems() {
+      if (adminRefreshInProgress) return;
+      adminRefreshInProgress = true;
+      try {
+        const localItems = getItems()
+          .filter(item => item.type !== 'registered')
+          .map(normalizeAdminItem);
+        try {
+          const response = await fetch('/api/items', { cache: 'no-store' });
+          if (response.ok) {
+            const data = await response.json();
+            if (data.success && Array.isArray(data.items)) {
+              cachedServerItems = data.items
+                .filter(item => item.type !== 'registered')
+                .map(normalizeAdminItem);
+            }
+          }
+        } catch (error) {
+          // Keep the last server snapshot when the API is temporarily unavailable.
+        }
+        const mergedItems = new Map(localItems.map(item => [String(item.id), item]));
+        cachedServerItems.forEach(item => mergedItems.set(String(item.id), item));
+        const nextItems = [...mergedItems.values()];
+        const nextSignature = JSON.stringify(nextItems);
+        if (nextSignature !== adminItemsSignature) {
+          adminItemsSignature = nextSignature;
+          adminItems = nextItems;
+          renderAdminPanel(adminItems);
+        }
+      } finally {
+        adminRefreshInProgress = false;
+      }
+    }
+
+    function renderAdminPanel(items = adminItems) {
+      adminItems = items;
       const lost    = items.filter(i => i.type==='lost').length;
       const found   = items.filter(i => i.type==='found').length;
       const claimed = items.filter(i => i.status==='claimed').length;
@@ -442,52 +552,94 @@
       `;
 
       renderItemsTable();
+      updateAdminNotificationBadge();
+    }
+
+    function showAdminItems(type) {
+      if (activeTab !== 'items') document.querySelector('.admin-tab[data-tab="items"]').click();
+      document.getElementById('adminFilterType').value = type || '';
+      adminCurrentPage = 1;
+      renderItemsTable();
+      document.getElementById('tabItems').scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+
+    function openAdminClaims() {
+      document.querySelector('.admin-tab[data-tab="claims"]').click();
+      document.getElementById('tabClaims').scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+
+    function updateAdminNotificationBadge() {
+      const pendingCount = getClaims().filter(claim => claim.claimStatus === 'pending').length;
+      const badge = document.getElementById('adminNotificationBadge');
+      badge.textContent = pendingCount > 99 ? '99+' : String(pendingCount);
+      badge.style.display = pendingCount ? 'inline-flex' : 'none';
+      badge.setAttribute('aria-label', `${pendingCount} pending claim requests`);
+    }
+
+    function openAdminLogoutModal() {
+      document.getElementById('adminLogoutModal').classList.add('open');
+    }
+
+    function closeAdminLogoutModal() {
+      document.getElementById('adminLogoutModal').classList.remove('open');
+    }
+
+    async function confirmAdminLogout() {
+      const button = document.getElementById('confirmAdminLogoutBtn');
+      button.disabled = true;
+      try {
+        const response = await fetch('/api/auth/logout', {
+          method: 'POST',
+          credentials: 'same-origin'
+        });
+        if (!response.ok) throw new Error('Logout request failed.');
+        window.location.href = '/login';
+      } catch (error) {
+        button.disabled = false;
+        showToast('Unable to log out. Please try again.', 'error');
+      }
     }
 
     function renderItemsTable() {
-      let items = getItems();
-      const q  = document.getElementById('adminSearch').value.toLowerCase().trim();
-      const ft = document.getElementById('adminFilterType').value;
-      const fs = document.getElementById('adminFilterStatus').value;
-
-      if (q)  items = items.filter(i =>
-        (i.title||'').toLowerCase().includes(q) ||
-        (i.reporterName||'').toLowerCase().includes(q) ||
-        (i.category||'').toLowerCase().includes(q)
-      );
-      if (ft) items = items.filter(i => i.type   === ft);
-      if (fs) items = items.filter(i => i.status === fs);
+      let items = getFilteredAdminItems();
 
       // Sort newest first
       items.sort((a,b) => new Date(b.createdAt)-new Date(a.createdAt));
 
       const tbody = document.getElementById('adminTableBody');
       const empty = document.getElementById('adminEmptyState');
+      const totalItems = items.length;
+      const totalPages = Math.ceil(totalItems / adminItemsPerPage);
+      adminCurrentPage = totalPages ? Math.min(adminCurrentPage, totalPages) : 1;
+      const startIndex = (adminCurrentPage - 1) * adminItemsPerPage;
+      const pageItems = items.slice(startIndex, startIndex + adminItemsPerPage);
+      renderItemsPagination(totalItems, totalPages, startIndex);
 
-      if (items.length === 0) {
+      if (totalItems === 0) {
         tbody.innerHTML = '';
         empty.style.display = 'block';
         return;
       }
       empty.style.display = 'none';
 
-      tbody.innerHTML = items.map((item, idx) => {
+      tbody.innerHTML = pageItems.map((item, idx) => {
         const date = item.type === 'lost' ? formatDate(item.dateLost) : formatDate(item.dateFound);
         const canClaim   = item.status !== 'claimed';
         const canRestore = item.status === 'claimed';
+        const rowNumber = startIndex + idx + 1;
         return `
         <tr>
-          <td>${idx + 1}</td>
-          <td class="td-title">
-            <a href="item-detail.html?id=${item.id}" target="_blank">${escHtml(item.title)}</a>
+          <td title="${rowNumber}">${rowNumber}</td>
+          <td class="td-title" title="${escHtml(item.title)}">
+            <a href="item-detail.html?id=${encodeURIComponent(item.id)}" target="_blank" title="${escHtml(item.title)}">${escHtml(item.title)}</a>
           </td>
-          <td>${typeBadge(item.type)}</td>
-          <td>${escHtml(item.category)}</td>
-          <td>${escHtml(item.location)}</td>
-          <td>${escHtml(item.reporterName)}<br><span style="font-size:.72rem;">${escHtml(item.reporterContact)}</span></td>
-          <td>${date}</td>
-          <td>${statusBadge(item.status)}</td>
-          <td style="white-space:nowrap;">
+          <td title="${escHtml(item.type)}">${typeBadge(item.type)}</td>
+          <td title="${escHtml(item.category)}">${escHtml(item.category)}</td>
+          <td title="${escHtml(item.location)}">${escHtml(item.location)}</td>
+          <td title="${escHtml(`${item.reporterName} ${item.reporterContact}`)}">${escHtml(item.reporterName)}<br><span style="font-size:.72rem;">${escHtml(item.reporterContact)}</span></td>
+          <td title="${escHtml(date)}">${date}</td>
+          <td title="${escHtml(item.status)}">${statusBadge(item.status)}</td>
+          <td class="actions-cell">
             <div style="display:flex;gap:.35rem;flex-wrap:wrap;">
               ${canClaim   ? `<button class="action-btn action-btn-claim"   onclick="markClaimed('${item.id}')">Mark Claimed</button>` : ''}
               ${canRestore ? `<button class="action-btn action-btn-restore" onclick="markRestore('${item.id}')">Restore</button>` : ''}
@@ -498,7 +650,58 @@
       }).join('');
     }
 
+    function getFilteredAdminItems() {
+      let items = adminItems.slice();
+      const query = document.getElementById('adminSearch').value.toLowerCase().trim();
+      const type = document.getElementById('adminFilterType').value;
+      const status = document.getElementById('adminFilterStatus').value;
+
+      if (query) items = items.filter(item =>
+        (item.title || '').toLowerCase().includes(query) ||
+        (item.reporterName || '').toLowerCase().includes(query) ||
+        (item.reporterContact || '').toLowerCase().includes(query) ||
+        (item.reporterEmail || '').toLowerCase().includes(query) ||
+        (item.category || '').toLowerCase().includes(query) ||
+        (item.location || '').toLowerCase().includes(query) ||
+        (item.desc || '').toLowerCase().includes(query)
+      );
+      if (type) items = items.filter(item => item.type === type);
+      if (status) items = items.filter(item => item.status === status || (['lost', 'found'].includes(status) && item.type === status));
+      return items;
+    }
+
+    function renderItemsPagination(totalItems, totalPages, startIndex) {
+      const summary = document.getElementById('paginationSummary');
+      const controls = document.getElementById('paginationControls');
+      const firstItem = totalItems ? startIndex + 1 : 0;
+      const lastItem = totalItems ? Math.min(startIndex + adminItemsPerPage, totalItems) : 0;
+      summary.textContent = `Showing ${firstItem} to ${lastItem} of ${totalItems} entries`;
+
+      if (totalPages <= 1) {
+        controls.innerHTML = '';
+        return;
+      }
+
+      const pageButtons = Array.from({ length: totalPages }, (_, index) => {
+        const page = index + 1;
+        const active = page === adminCurrentPage;
+        return `<button type="button" class="pagination-button${active ? ' active' : ''}" onclick="changeAdminItemsPage(${page})" aria-label="Page ${page}"${active ? ' aria-current="page"' : ''}>${page}</button>`;
+      }).join('');
+
+      controls.innerHTML = `
+        <button type="button" class="pagination-button" onclick="changeAdminItemsPage(${adminCurrentPage - 1})" ${adminCurrentPage === 1 ? 'disabled' : ''}>Previous</button>
+        ${pageButtons}
+        <button type="button" class="pagination-button" onclick="changeAdminItemsPage(${adminCurrentPage + 1})" ${adminCurrentPage === totalPages ? 'disabled' : ''}>Next</button>`;
+    }
+
+    function changeAdminItemsPage(page) {
+      const totalPages = Math.max(1, Math.ceil(getFilteredAdminItems().length / adminItemsPerPage));
+      adminCurrentPage = Math.max(1, Math.min(Number(page) || 1, totalPages));
+      renderItemsTable();
+    }
+
     function renderClaimsTab() {
+      updateAdminNotificationBadge();
       const claims = getClaims();
       const mount  = document.getElementById('claimsMount');
 
@@ -533,13 +736,13 @@
 
     function markClaimed(id) {
       updateItemStatus(id, 'claimed');
-      renderAdminPanel();
+      refreshAdminItems();
       showToast('Item marked as claimed.');
     }
     function markRestore(id) {
       const item = getItemById(id);
       if (item) updateItemStatus(id, item.type);
-      renderAdminPanel();
+      refreshAdminItems();
       showToast('Item status restored.');
     }
 
@@ -557,7 +760,7 @@
       if (deleteTargetId) {
         deleteItem(deleteTargetId);
         closeDeleteModal();
-        renderAdminPanel();
+        refreshAdminItems();
         showToast('Item deleted successfully.');
       }
     }
