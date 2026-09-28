@@ -186,13 +186,91 @@
     [data-theme='light'] .del-modal h3 { color: #dc2626; }
     [data-theme='light'] .del-modal p  { color: #475569; }
 
+    .admin-navbar .navbar-container { max-width: 1280px; }
+    .admin-navbar .nav-links { gap: .8rem; }
+    .admin-navbar .nav-links a { font-size: .78rem; }
+    .admin-navbar .nav-links a:hover { background: rgba(59,130,246,.08); border-radius: 6px; }
+    .admin-navbar .nav-links a.nav-active {
+      border-bottom: 0;
+      border-radius: 6px;
+      padding: 0 .55rem;
+      color: var(--blue-main);
+      background: rgba(59,130,246,.12);
+    }
+    .admin-navbar .nav-actions { gap: .5rem; }
+    .admin-profile { gap: .5rem; }
+    .admin-profile .user-name { max-width: 150px; }
+    .admin-nav-bell { width: 36px; padding: 0; }
+    #adminLogoutModal {
+      position: fixed;
+      inset: 0;
+      z-index: 2200;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 1rem;
+      background: rgba(0,0,0,.72);
+    }
+    #adminLogoutModal.open { display: flex; }
+
+    @media (max-width: 560px) {
+      .admin-navbar .navbar-container { flex-wrap: wrap; gap: .35rem; padding: .45rem .75rem; }
+      .admin-navbar .nav-actions { width: 100%; justify-content: flex-end; flex-wrap: wrap; }
+      .admin-navbar .nav-links { top: 100%; }
+      .admin-profile .user-name { max-width: 105px; font-size: .7rem; }
+      .admin-profile { gap: .35rem; padding: 0 .5rem; }
+    }
+
     @media (max-width: 600px) {
       th, td { padding: .6rem .65rem; font-size: .78rem; }
     }
   </style>
 </head>
 <body>
-  <div id="navMount"></div>
+  <nav class="navbar admin-navbar" aria-label="Admin navigation">
+    <div class="navbar-container">
+      <a href="admin.html" class="nav-logo">
+        <img src="cspc-logo.png" alt="CSPC Logo" />
+        <span class="nav-logo-full">CSPC Lost &amp; Found</span>
+        <span class="nav-logo-short">CSPC Admin</span>
+      </a>
+      <div class="nav-links" id="navLinks">
+        <a href="admin.html" class="nav-active" aria-current="page">Dashboard</a>
+        <a href="#tabItems" data-admin-filter="">Browse</a>
+        <a href="#tabItems" data-admin-filter="lost">Report Lost</a>
+        <a href="#tabItems" data-admin-filter="found">Report Found</a>
+        <a href="#tabClaims" id="adminClaimsNavLink">Claim Requests</a>
+      </div>
+      <div class="nav-actions">
+        <button type="button" class="theme-toggle" id="themeToggleBtn" onclick="toggleTheme()" title="Toggle Theme" aria-label="Toggle theme">
+          <span class="theme-toggle-icon">🌙</span>
+        </button>
+        <button type="button" class="notif-bell-btn admin-nav-bell" id="adminNotificationBtn" onclick="openAdminClaims()" title="Open pending claims" aria-label="Open pending claims">
+          🔔 <span class="notif-badge" id="adminNotificationBadge" style="display:none;">0</span>
+        </button>
+        <div class="user-pill admin-profile" aria-label="Signed in as CSPC Administrator, SAO Admin">
+          <span class="user-name">CSPC Administrator</span>
+          <span class="role-badge">SAO ADMIN</span>
+          <button type="button" class="user-pill-logout" onclick="openAdminLogoutModal()" title="Sign out of administrator account">Logout</button>
+        </div>
+        <button type="button" class="menu-toggle" id="menuToggle" aria-label="Toggle admin navigation menu">
+          <span></span><span></span><span></span>
+        </button>
+      </div>
+    </div>
+  </nav>
+
+  <div class="slip-overlay" id="adminLogoutModal" onclick="if(event.target===this) closeAdminLogoutModal()">
+    <div style="background:#18181b;border:1px solid var(--border);border-radius:16px;padding:1.75rem;max-width:400px;width:90%;text-align:center;box-shadow:0 10px 40px rgba(0,0,0,.85);">
+      <div style="font-size:2.2rem;font-weight:700;color:var(--blue-main);margin-bottom:.5rem;">↪</div>
+      <h3 style="font-size:1.1rem;font-weight:800;color:var(--text-main);margin-bottom:.5rem;">Confirm Sign Out</h3>
+      <p style="font-size:.85rem;color:var(--text-muted);margin-bottom:1.25rem;">Are you sure you want to sign out?</p>
+      <div style="display:flex;gap:.75rem;justify-content:center;">
+        <button type="button" class="btn btn-outline" onclick="closeAdminLogoutModal()" style="padding:.5rem 1.25rem;">Cancel</button>
+        <button type="button" class="btn btn-primary" id="confirmAdminLogoutBtn" onclick="confirmAdminLogout()" style="padding:.5rem 1.25rem;">Sign Out</button>
+      </div>
+    </div>
+  </div>
 
   <div id="adminPanel">
     <div class="page-header">
@@ -294,9 +372,19 @@
     let activeTab = 'items';
 
     document.addEventListener('DOMContentLoaded', () => {
-      document.getElementById('navMount').innerHTML = renderNav('admin.html');
       initNav();
       renderAdminPanel();
+
+      document.getElementById('adminClaimsNavLink').addEventListener('click', event => {
+        event.preventDefault();
+        openAdminClaims();
+      });
+      document.querySelectorAll('[data-admin-filter]').forEach(link => {
+        link.addEventListener('click', event => {
+          event.preventDefault();
+          showAdminItems(link.dataset.adminFilter);
+        });
+      });
 
     // Tabs
       document.querySelectorAll('.admin-tab').forEach(tab => {
@@ -344,6 +432,51 @@
       `;
 
       renderItemsTable();
+      updateAdminNotificationBadge();
+    }
+
+    function showAdminItems(type) {
+      if (activeTab !== 'items') document.querySelector('.admin-tab[data-tab="items"]').click();
+      document.getElementById('adminFilterType').value = type || '';
+      renderItemsTable();
+      document.getElementById('tabItems').scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+
+    function openAdminClaims() {
+      document.querySelector('.admin-tab[data-tab="claims"]').click();
+      document.getElementById('tabClaims').scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+
+    function updateAdminNotificationBadge() {
+      const pendingCount = getClaims().filter(claim => claim.claimStatus === 'pending').length;
+      const badge = document.getElementById('adminNotificationBadge');
+      badge.textContent = pendingCount > 99 ? '99+' : String(pendingCount);
+      badge.style.display = pendingCount ? 'inline-flex' : 'none';
+      badge.setAttribute('aria-label', `${pendingCount} pending claim requests`);
+    }
+
+    function openAdminLogoutModal() {
+      document.getElementById('adminLogoutModal').classList.add('open');
+    }
+
+    function closeAdminLogoutModal() {
+      document.getElementById('adminLogoutModal').classList.remove('open');
+    }
+
+    async function confirmAdminLogout() {
+      const button = document.getElementById('confirmAdminLogoutBtn');
+      button.disabled = true;
+      try {
+        const response = await fetch('/api/auth/logout', {
+          method: 'POST',
+          credentials: 'same-origin'
+        });
+        if (!response.ok) throw new Error('Logout request failed.');
+        window.location.href = '/login';
+      } catch (error) {
+        button.disabled = false;
+        showToast('Unable to log out. Please try again.', 'error');
+      }
     }
 
     function renderItemsTable() {
@@ -401,6 +534,7 @@
     }
 
     function renderClaimsTab() {
+      updateAdminNotificationBadge();
       const claims = getClaims();
       const mount  = document.getElementById('claimsMount');
 
