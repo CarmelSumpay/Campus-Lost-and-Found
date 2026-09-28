@@ -22,26 +22,109 @@ function saveItems(items) {
 }
 
 // Helper: Smart Match & Reconciliation Detector
+function normalizeText(value) {
+  return String(value || '')
+    .toLowerCase()
+    .replace(/[^a-z0-9\s]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function tokenizeText(value) {
+  const stopWords = new Set([
+    'with', 'case', 'blue', 'black', 'item', 'lost', 'found', 'cspc', 'college',
+    'the', 'and', 'for', 'from', 'near', 'this', 'that', 'into', 'onto', 'there',
+    'please', 'return', 'owner', 'campus', 'building', 'student', 'report', 'reports'
+  ]);
+
+  return normalizeText(value)
+    .split(' ')
+    .filter(word => word.length > 2 && !stopWords.has(word));
+}
+
+function computeTokenSimilarity(a, b) {
+  const tokensA = tokenizeText(a);
+  const tokensB = tokenizeText(b);
+
+  if (!tokensA.length || !tokensB.length) return 0;
+
+  const setA = new Set(tokensA);
+  const setB = new Set(tokensB);
+  const intersection = [...setA].filter(token => setB.has(token)).length;
+  const union = new Set([...tokensA, ...tokensB]).size;
+
+  if (union === 0) return 0;
+
+  const jaccard = intersection / union;
+  const overlap = intersection / Math.min(tokensA.length, tokensB.length);
+  return Math.max(jaccard, overlap);
+}
+
+function compareVerificationHints(left, right) {
+  const a = normalizeText(left || '');
+  const b = normalizeText(right || '');
+  if (!a || !b) return 0;
+
+  const tokensA = new Set(tokenizeText(a));
+  const tokensB = new Set(tokenizeText(b));
+  const overlap = [...tokensA].filter(token => tokensB.has(token)).length;
+
+  return overlap > 0 ? 1 : 0;
+}
+
+function scorePotentialMatch(item, other) {
+  const categoryMatch = item.category && other.category && item.category === other.category;
+  const locationA = normalizeText(item.location);
+  const locationB = normalizeText(other.location);
+  const sameLocation = !!(locationA && locationB && (
+    locationA.includes(locationB.split(' ')[0]) ||
+    locationB.includes(locationA.split(' ')[0]) ||
+    locationA === locationB
+  ));
+
+  const nameSimilarity = computeTokenSimilarity(item.title, other.title);
+  const descSimilarity = computeTokenSimilarity(item.desc || item.description || '', other.desc || other.description || '');
+  const verificationScore = compareVerificationHints(item.verification, other.verification);
+
+  const categoryWeight = categoryMatch ? 0.46 : 0;
+  const nameWeight = Math.max(nameSimilarity, descSimilarity) * 0.33;
+  const verificationWeight = verificationScore * 0.18;
+  const locationWeight = sameLocation ? 0.08 : 0;
+  const score = categoryWeight + nameWeight + verificationWeight + locationWeight;
+
+  return { score, categoryMatch, sameLocation, nameSimilarity, descSimilarity, verificationScore };
+}
+
 function findMatch(item, allItems) {
   if (item.claimed) return null;
   const targetType = item.type === 'lost' ? 'found' : 'lost';
 
-  const stopWords = ['with', 'case', 'blue', 'black', 'item', 'lost', 'found', 'cspc', 'college'];
-  const keywords = item.title.toLowerCase()
-    .replace(/[^a-z0-9\s]/g, '')
-    .split(/\s+/)
-    .filter(w => w.length > 2 && !stopWords.includes(w));
+  let bestMatch = null;
+  let bestScore = 0;
+  let bestMeta = null;
 
-  return allItems.find(other => {
-    if (other.id === item.id || other.type !== targetType || other.claimed) return false;
+  for (const other of allItems) {
+    if (other.id === item.id || other.type !== targetType || other.claimed) continue;
 
-    const otherTitle = other.title.toLowerCase();
-    const hasKeyword = keywords.some(k => otherTitle.includes(k));
-    const sameCategory = other.category === item.category;
-    const sameLocation = other.location.toLowerCase().includes(item.location.toLowerCase().split(' ')[0]);
+    const meta = scorePotentialMatch(item, other);
+    if (meta.score > bestScore) {
+      bestScore = meta.score;
+      bestMatch = other;
+      bestMeta = meta;
+    }
+  }
 
-    return hasKeyword || (sameCategory && sameLocation);
-  });
+  const hasStrongCategory = !!(bestMeta && bestMeta.categoryMatch);
+  const hasStrongNameSimilarity = !!(bestMeta && bestMeta.nameSimilarity >= 0.28);
+  const hasStrongDescriptionSimilarity = !!(bestMeta && bestMeta.descSimilarity >= 0.22);
+  const hasVerificationOverlap = !!(bestMeta && bestMeta.verificationScore > 0);
+
+  if (!bestMatch || !bestMeta) return null;
+  if (!hasStrongCategory) return null;
+  if (!hasStrongNameSimilarity && !hasStrongDescriptionSimilarity && !hasVerificationOverlap) return null;
+  if (bestScore < 0.58) return null;
+
+  return bestMatch;
 }
 
 // GET /api/stats - High-level overview
