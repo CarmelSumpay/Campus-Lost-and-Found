@@ -1,81 +1,91 @@
 // server.js - CSPC Lost & Found Management System (Node.js & Express)
 const express = require('express');
 const session = require('express-session');
+const FileStore = require('session-file-store')(session);
 const path = require('path');
 const fs = require('fs');
 
 const authRoutes = require('./routes/authRoutes');
 const itemRoutes = require('./routes/itemRoutes');
 
-const app = express();
-const PORT = process.env.PORT || 3000;
+function createApp() {
+  const app = express();
+  const isProduction = process.env.NODE_ENV === 'production';
+  const dataDir = process.env.DATA_DIR || path.join(__dirname, 'data');
+  const sessionSecret = process.env.SESSION_SECRET || (isProduction ? '' : 'cspc-lostfound-development-only');
 
-// Ensure data directory exists
-const dataDir = path.join(__dirname, 'data');
-if (!fs.existsSync(dataDir)) {
-  fs.mkdirSync(dataDir, { recursive: true });
+  if (!sessionSecret) {
+    throw new Error('SESSION_SECRET must be configured in production.');
+  }
+
+  fs.mkdirSync(path.join(dataDir, 'uploads'), { recursive: true });
+  if (isProduction) {
+    fs.mkdirSync(path.join(dataDir, 'sessions'), { recursive: true });
+    app.set('trust proxy', 1);
+  }
+
+  app.use(express.json({ limit: '256kb' }));
+  app.use(express.urlencoded({ extended: true, limit: '64kb' }));
+  app.use(session({
+    name: 'cspc.sid',
+    secret: sessionSecret,
+    store: isProduction ? new FileStore({ path: path.join(dataDir, 'sessions'), ttl: 86400, retries: 0 }) : undefined,
+    resave: false,
+    saveUninitialized: false,
+    cookie: {
+      httpOnly: true,
+      sameSite: 'lax',
+      secure: isProduction,
+      maxAge: 1000 * 60 * 60 * 24
+    }
+  }));
+
+  app.use('/api/auth', authRoutes);
+  app.use('/api/items', itemRoutes);
+  app.use('/api/stats', (req, res) => res.redirect('/api/items/stats'));
+  app.use('/uploads', express.static(path.join(dataDir, 'uploads'), { fallthrough: false, maxAge: '7d' }));
+
+  app.get('/admin.html', (req, res) => {
+    if (!req.session?.user) return res.redirect('/login?redirect=/admin.html');
+    if (req.session.user.role !== 'admin') return res.redirect('/');
+    res.sendFile(path.join(__dirname, 'admin.html'));
+  });
+
+  app.get(['/browse.html', '/item-detail.html'], (req, res) => res.redirect(302, '/#items'));
+  app.get('/report-lost.html', (req, res) => res.redirect(302, '/?report=lost#itemForm'));
+  app.get('/report-found.html', (req, res) => res.redirect(302, '/?report=found#itemForm'));
+
+  app.use(express.static(path.join(__dirname, 'public')));
+  app.use(['/data', '/routes', '/middleware', '/tests', '/node_modules', '/.git', '/server.js', '/package.json', '/package-lock.json'], (req, res) => res.sendStatus(404));
+  app.use(express.static(__dirname));
+
+  app.get('/', (req, res) => res.sendFile(path.join(__dirname, 'public', 'index.html')));
+  app.get('/login', (req, res) => res.sendFile(path.join(__dirname, 'public', 'login.html')));
+  app.use('/api/*', (req, res) => res.status(404).json({ success: false, message: 'API endpoint not found.' }));
+
+  app.use((err, req, res, next) => {
+    if (res.headersSent) return next(err);
+    if (err.code === 'LIMIT_FILE_SIZE') {
+      return res.status(413).json({ success: false, message: 'Image must be 5 MB or smaller.' });
+    }
+    if (err.name === 'MulterError' || err.status || err.type === 'entity.too.large') {
+      return res.status(err.status === 413 || err.type === 'entity.too.large' ? 413 : (err.status || 400))
+        .json({ success: false, message: err.message || 'Invalid upload.' });
+    }
+    if (req.path.startsWith('/api/')) {
+      return res.status(500).json({ success: false, message: 'An unexpected server error occurred.' });
+    }
+    console.error('Server error:', err);
+    res.status(500).send('An unexpected server error occurred.');
+  });
+
+  return app;
 }
 
-// Request parsers
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+if (require.main === module) {
+  const PORT = process.env.PORT || 3000;
+  authRoutes.ensureAdminAccount();
+  createApp().listen(PORT, () => console.log(`Server running at: http://localhost:${PORT}`));
+}
 
-// Session configuration
-app.use(session({
-  name: 'cspc.sid',
-  secret: 'cspc-lostfound-secret-key-nabua-2026',
-  resave: false,
-  saveUninitialized: false,
-  cookie: {
-    httpOnly: true,
-    maxAge: 1000 * 60 * 60 * 24 // 24 hours
-  }
-}));
-
-// API Routes
-app.use('/api/auth', authRoutes);
-app.use('/api/items', itemRoutes);
-app.use('/api/stats', (req, res) => res.redirect('/api/items/stats'));
-
-app.get('/admin.html', (req, res) => {
-  if (!req.session?.user) {
-    return res.redirect('/login?redirect=/admin.html');
-  }
-  if (req.session.user.role !== 'admin') {
-    return res.redirect('/');
-  }
-  res.sendFile(path.join(__dirname, 'admin.html'));
-});
-
-// Static assets (CSS, logo, client JS)
-app.use(express.static(path.join(__dirname, 'public')));
-app.use(express.static(__dirname)); // fallback to root
-
-// Page routes
-app.get('/', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'index.html'));
-});
-
-app.get('/login', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'login.html'));
-});
-
-// 404 Handler for API
-app.use('/api/*', (req, res) => {
-  res.status(404).json({ success: false, message: 'API endpoint not found.' });
-});
-
-// Global error handler
-app.use((err, req, res, next) => {
-  console.error('Server error:', err);
-  res.status(500).json({
-    success: false,
-    message: 'An unexpected server error occurred.'
-  });
-});
-
-authRoutes.ensureAdminAccount();
-
-app.listen(PORT, () => {
-  console.log(` Server running at: http://localhost:${PORT}`);
-});
+module.exports = { createApp };

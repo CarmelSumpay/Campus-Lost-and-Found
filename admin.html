@@ -453,6 +453,7 @@
     let deleteTargetId = null;
     let activeTab = 'items';
     let adminItems = [];
+    let claimRequests = [];
     let adminRefreshInProgress = false;
     let adminItemsSignature = null;
     let cachedServerItems = [];
@@ -462,9 +463,7 @@
     document.addEventListener('DOMContentLoaded', () => {
       initNav();
       refreshAdminItems();
-      window.addEventListener('storage', event => {
-        if (event.key === STORAGE_KEY || event.key === null) refreshAdminItems();
-      });
+      renderClaimsTab();
       window.setInterval(refreshAdminItems, 5000);
 
       document.getElementById('adminClaimsNavLink').addEventListener('click', event => {
@@ -525,9 +524,6 @@
       if (adminRefreshInProgress) return;
       adminRefreshInProgress = true;
       try {
-        const localItems = getItems()
-          .filter(item => item.type !== 'registered')
-          .map(normalizeAdminItem);
         try {
           const response = await fetch('/api/items', { cache: 'no-store' });
           if (response.ok) {
@@ -541,9 +537,7 @@
         } catch (error) {
           // Keep the last server snapshot when the API is temporarily unavailable.
         }
-        const mergedItems = new Map(localItems.map(item => [String(item.id), item]));
-        cachedServerItems.forEach(item => mergedItems.set(String(item.id), item));
-        const nextItems = [...mergedItems.values()];
+        const nextItems = [...cachedServerItems];
         const nextSignature = JSON.stringify(nextItems);
         if (nextSignature !== adminItemsSignature) {
           adminItemsSignature = nextSignature;
@@ -561,7 +555,7 @@
       const found   = items.filter(i => i.type==='found').length;
       const claimed = items.filter(i => i.status==='claimed').length;
       const pending = items.filter(i => i.status !== 'claimed').length;
-      const claims  = getClaims().length;
+      const claims  = claimRequests.filter(claim => claim.status === 'pending').length;
 
       document.getElementById('adminStats').innerHTML = `
         <div class="stat-card"><div class="stat-number">${items.length}</div><div class="stat-label">Total Items</div></div>
@@ -590,7 +584,7 @@
     }
 
     function updateAdminNotificationBadge() {
-      const pendingCount = getClaims().filter(claim => claim.claimStatus === 'pending').length;
+      const pendingCount = claimRequests.filter(claim => claim.status === 'pending').length;
       const badge = document.getElementById('adminNotificationBadge');
       badge.textContent = pendingCount > 99 ? '99+' : String(pendingCount);
       badge.style.display = pendingCount ? 'inline-flex' : 'none';
@@ -721,50 +715,67 @@
       renderItemsTable();
     }
 
-    function renderClaimsTab() {
-      updateAdminNotificationBadge();
-      const claims = getClaims();
-      const mount  = document.getElementById('claimsMount');
+    async function renderClaimsTab() {
+      const mount = document.getElementById('claimsMount');
+      mount.innerHTML = '<div class="empty-state"><p>Loading claim requests...</p></div>';
+      try {
+        const response = await fetch('/api/items/claims', { cache: 'no-store' });
+        const data = await response.json();
+        if (!response.ok || !data.success) throw new Error(data.message || 'Unable to load claim requests.');
+        claimRequests = data.claims;
+        updateAdminNotificationBadge();
+        const claimsStat = document.querySelectorAll('#adminStats .stat-number')[5];
+        if (claimsStat) claimsStat.textContent = claimRequests.filter(claim => claim.status === 'pending').length;
 
-      if (claims.length === 0) {
-        mount.innerHTML = `<div class="empty-state"><h3>No claims yet</h3><p>Claim requests submitted through item detail pages will appear here.</p></div>`;
-        return;
-      }
+        if (claimRequests.length === 0) {
+          mount.innerHTML = '<div class="empty-state"><h3>No claim requests</h3><p>Submitted requests will appear here for moderator review.</p></div>';
+          return;
+        }
 
-      mount.innerHTML = claims.map(claim => {
-        const statusCls = `claim-status-${claim.claimStatus}`;
-        return `
-        <div class="claim-card">
-          <div class="claim-card-header">
-            <div>
-              <h3>Claim for: ${escHtml(claim.itemTitle)}</h3>
-              <div class="claim-meta">Claim ID: ${claim.id} · Submitted: ${formatDate(claim.createdAt)} (${timeAgo(claim.createdAt)})</div>
+        mount.innerHTML = claimRequests.map(claim => `
+          <div class="claim-card">
+            <div class="claim-card-header">
+              <div>
+                <h3>Claim for: ${escHtml(claim.itemTitle)}</h3>
+                <div class="claim-meta">Reference: ${escHtml(claim.itemRefCode)} · Submitted: ${formatDate(claim.createdAt)} (${timeAgo(claim.createdAt)})</div>
+              </div>
+              <span class="badge ${claim.status === 'pending' ? 'badge-lost' : claim.status === 'approved' ? 'badge-found' : 'badge-claimed'}" style="text-transform:capitalize;">${escHtml(claim.status)}</span>
             </div>
-            <span class="badge ${claim.claimStatus === 'pending' ? 'badge-lost' : claim.claimStatus === 'approved' ? 'badge-found' : ''}" style="text-transform:capitalize;">
-              ${claim.claimStatus}
-            </span>
-          </div>
-          <p><strong style="color:var(--text-main);">Claimer:</strong> ${escHtml(claim.claimerName)} · ${escHtml(claim.claimerContact)}${claim.claimerEmail ? ` · ${escHtml(claim.claimerEmail)}` : ''}</p>
-          <p style="margin-top:.4rem;"><strong style="color:var(--text-main);">Proof:</strong> ${escHtml(claim.proof)}</p>
-          ${claim.claimStatus === 'pending' ? `
-          <div style="display:flex;gap:.5rem;margin-top:.85rem;">
-            <button class="action-btn action-btn-claim" onclick="approveClaim('${claim.id}')">Approve</button>
-            <button class="action-btn action-btn-delete" onclick="rejectClaim('${claim.id}')">✕ Reject</button>
-          </div>` : ''}
-        </div>`;
-      }).join('');
+            <p><strong style="color:var(--text-main);">Claimant:</strong> ${escHtml(claim.claimantName)} · ${escHtml(claim.claimantEmail)}</p>
+            <p style="margin-top:.4rem;"><strong style="color:var(--text-main);">Private ownership details:</strong> ${escHtml(claim.proof)}</p>
+            ${claim.status === 'pending' ? `
+            <div style="display:flex;gap:.5rem;margin-top:.85rem;">
+              <button class="action-btn action-btn-claim" onclick="reviewClaim('${claim.id}','approved')">Approve</button>
+              <button class="action-btn action-btn-delete" onclick="reviewClaim('${claim.id}','rejected')">Reject</button>
+            </div>` : ''}
+          </div>`).join('');
+      } catch (error) {
+        mount.innerHTML = `<div class="empty-state"><h3>Claims unavailable</h3><p>${escHtml(error.message)}</p></div>`;
+      }
+    }
+
+    async function updateItemClaimStatus(id, proof = '') {
+      try {
+        const response = await fetch(`/api/items/${encodeURIComponent(id)}/claim`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ proof })
+        });
+        const data = await response.json();
+        if (!response.ok || !data.success) throw new Error(data.message || 'Unable to update item status.');
+        await refreshAdminItems();
+        showToast(data.message);
+      } catch (error) {
+        showToast(error.message, 'error');
+      }
     }
 
     function markClaimed(id) {
-      updateItemStatus(id, 'claimed');
-      refreshAdminItems();
-      showToast('Item marked as claimed.');
+      updateItemClaimStatus(id, 'Verified by moderator during campus handoff.');
     }
+
     function markRestore(id) {
-      const item = getItemById(id);
-      if (item) updateItemStatus(id, item.type);
-      refreshAdminItems();
-      showToast('Item status restored.');
+      updateItemClaimStatus(id);
     }
 
     function openDeleteModal(id, title) {
@@ -793,7 +804,6 @@
           throw new Error(data.message || 'Unable to delete item. Please try again.');
         }
 
-        deleteItem(id);
         closeDeleteModal();
         await refreshAdminItems();
         showToast('Item permanently deleted.');
@@ -804,19 +814,25 @@
       }
     }
 
-    function approveClaim(id) {
-      updateClaimStatus(id, 'approved');
-      renderClaimsTab();
-      showToast('Claim approved.');
-    }
-    function rejectClaim(id) {
-      updateClaimStatus(id, 'rejected');
-      renderClaimsTab();
-      showToast('Claim rejected.');
+    async function reviewClaim(id, status) {
+      try {
+        const response = await fetch(`/api/items/claims/${encodeURIComponent(id)}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ status })
+        });
+        const data = await response.json();
+        if (!response.ok || !data.success) throw new Error(data.message || 'Unable to review claim.');
+        await renderClaimsTab();
+        await refreshAdminItems();
+        showToast(data.message);
+      } catch (error) {
+        showToast(error.message, 'error');
+      }
     }
 
     function exportCSV() {
-      const items = getItems();
+      const items = adminItems;
       const headers = ['ID','Type','Title','Category','Location','Status','Reporter','Contact','Email','Date Lost/Found','Created At'];
       const rows = items.map(i => [
         i.id, i.type, i.title, i.category, i.location, i.status,

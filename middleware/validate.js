@@ -7,6 +7,9 @@ const ALLOWED_CATEGORIES = [
   'Books & Documents',
   'Keys',
   'Clothing & Accessories',
+  'Jewelry',
+  'Sports Equipment',
+  'School Supplies',
   'Others'
 ];
 
@@ -27,6 +30,8 @@ function validateItemReport(req, res, next) {
   const cleanLocation = sanitizeString(location);
   const cleanContact = sanitizeString(contact);
   const cleanDesc = sanitizeString(desc);
+  const cleanVerification = sanitizeString(req.body.verification || '');
+  const cleanLocationDetails = sanitizeString(req.body.locationDetails || '');
 
   if (!cleanTitle || cleanTitle.length < 3 || cleanTitle.length > 100) {
     errors.push('Item name must be between 3 and 100 characters.');
@@ -51,6 +56,9 @@ function validateItemReport(req, res, next) {
   if (!cleanDesc || cleanDesc.length < 5 || cleanDesc.length > 500) {
     errors.push('Description must be between 5 and 500 characters.');
   }
+  if (cleanVerification.length > 250 || cleanLocationDetails.length > 150) {
+    errors.push('Additional report details are too long.');
+  }
 
   if (errors.length > 0) {
     return res.status(400).json({
@@ -67,11 +75,9 @@ function validateItemReport(req, res, next) {
   req.body.location = cleanLocation;
   req.body.contact = cleanContact;
   req.body.desc = cleanDesc;
-  req.body.locationDetails = sanitizeString(req.body.locationDetails || '');
-  req.body.verification = sanitizeString(req.body.verification || '');
-  req.body.photo = (req.body.photo && typeof req.body.photo === 'string' && req.body.photo.startsWith('data:image/'))
-    ? req.body.photo
-    : '';
+  req.body.locationDetails = cleanLocationDetails;
+  req.body.verification = cleanVerification;
+  delete req.body.photo;
 
   next();
 }

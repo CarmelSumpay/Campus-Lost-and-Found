@@ -764,7 +764,7 @@
 
         <div class="input-field" style="margin-bottom: 1.5rem;">
           <label for="itemDesc">Description &amp; Identifying Details *</label>
-          <textarea id="itemDesc" placeholder="Describe color, brand, special marks, stickers, or where to claim it..." required minlength="5"></textarea>
+          <textarea id="itemDesc" placeholder="Describe the item publicly. Keep one unique identifying detail private for ownership checks." required minlength="5"></textarea>
         </div>
 
         <div style="display: flex; gap: 0.75rem; margin-top: 0.25rem;">
@@ -889,7 +889,7 @@
 
       <div class="input-field" id="claimProofGroup" style="margin-bottom: 1.25rem;">
         <label for="claimProofInput">Claimant Proof / Verification Answer</label>
-        <input type="text" id="claimProofInput" placeholder="Enter proof, ID details, or verification answer..." style="width: 100%; background: rgba(255,255,255,0.05); border: 1.5px solid rgba(59,130,246,0.25); border-radius: 8px; padding: 0.6rem; color: var(--text-main);" />
+        <input type="text" id="claimProofInput" maxlength="500" placeholder="Enter proof, ID details, or verification answer..." style="width: 100%; background: rgba(255,255,255,0.05); border: 1.5px solid rgba(59,130,246,0.25); border-radius: 8px; padding: 0.6rem; color: var(--text-main);" />
       </div>
 
       <div style="display: flex; gap: 0.75rem; justify-content: flex-end;">
@@ -1202,6 +1202,7 @@
           if (chipVault) chipVault.style.display = 'inline-block';
           fetchMyBelongingsCount();
           loadMyNotifications();
+          fetchAndRenderItems();
 
           // Pre-fill contact if student has details
           if (!document.getElementById('itemContact').value) {
@@ -1363,7 +1364,7 @@
               <div class="card-actions" style="margin-top: 1rem;">
                 <button class="btn-sm btn-qr" onclick="openQrStickerModal(${item.id})">🏷️ QR Sticker</button>
                 <button class="btn-sm btn-outline" style="border-color: rgba(34,197,94,0.4); color: #86efac;" onclick="openAnonymousFinderModal('${escapeHtml(item.refCode)}')">📱 Test Finder Screen</button>
-                <button class="btn-sm btn-del" onclick="deleteItem(${item.id})">Unregister</button>
+                ${currentUser?.role === 'admin' ? `<button class="btn-sm btn-del" onclick="deleteItem(${item.id})">Unregister</button>` : ''}
               </div>
             </div>
           `;
@@ -1378,6 +1379,8 @@
           badgeHtml = '<span class="item-badge badge-found">Found</span>';
         }
 
+        const canManageStatus = currentUser?.role === 'admin';
+        const canRequestClaim = item.type === 'found' && !item.claimed && (!currentUser || item.reportedBy !== currentUser.id);
         const claimBtnText = item.claimed ? 'Mark Unclaimed' : 'Mark Claimed';
 
         let matchBannerHtml = '';
@@ -1392,15 +1395,15 @@
           `;
         }
 
-        const verificationHtml = item.verification ? `
-          <span><strong>Verification Hint:</strong> ${escapeHtml(item.verification)}</span>
-        ` : '';
-
-        // Admin-only or reporter-only delete
-        const canDelete = currentUser && (currentUser.role === 'admin' || item.reportedBy === currentUser.id);
+        const canDelete = currentUser?.role === 'admin';
         const delBtnHtml = canDelete
           ? `<button class="btn-sm btn-del" onclick="deleteItem(${item.id})">Remove</button>`
           : '';
+        const claimBtnHtml = canManageStatus
+          ? `<button class="btn-sm btn-claim" onclick="toggleClaim(${item.id})">${claimBtnText}</button>`
+          : canRequestClaim
+            ? `<button class="btn-sm btn-claim" onclick="openClaimRequestModal(${item.id})">Request Claim</button>`
+            : '';
 
         const photoHtml = item.photo ? `
           <div style="width: 100%; height: 180px; overflow: hidden; border-radius: 8px; margin: 0.6rem 0; background: rgba(0,0,0,0.3); border: 1px solid rgba(59,130,246,0.3); display: flex; align-items: center; justify-content: center; cursor: pointer; position: relative;" onclick="openImageModal('${escapeHtml(item.photo)}', '${escapeHtml(item.title)}')">
@@ -1431,14 +1434,13 @@
 
             <div class="card-meta-line">
               <span><strong>Location:</strong> ${escapeHtml(item.location)}</span>
-              <span><strong>Contact:</strong> ${escapeHtml(item.contact)}</span>
+              <span><strong>Return:</strong> Coordinate through the CSPC Student Affairs Office or Campus Security Desk.</span>
               <span><strong>Reported:</strong> ${formatTimestamp(item.createdAt || item.date)}</span>
               ${item.claimedAt ? `<span><strong>Claimed:</strong> ${formatTimestamp(item.claimedAt)}</span>` : ''}
-              ${verificationHtml}
             </div>
 
             <div class="card-actions">
-              <button class="btn-sm btn-claim" onclick="toggleClaim(${item.id})">${claimBtnText}</button>
+              ${claimBtnHtml}
               <button class="btn-sm btn-qr" onclick="openQrStickerModal(${item.id})">🏷️ QR Sticker</button>
               ${delBtnHtml}
             </div>
@@ -1847,7 +1849,8 @@
       document.getElementById('imageModal').classList.remove('open');
     }
 
-    let currentPhotoBase64 = '';
+    let selectedPhotoFile = null;
+    let currentPhotoPreviewUrl = '';
 
     function handlePhotoSelect(e) {
       handlePhotoFile(e.target.files[0]);
@@ -1863,22 +1866,27 @@
       if (!file) return;
 
       if (file.size > 5 * 1024 * 1024) {
-        showToast('Image file size must be less than 5MB.', true);
-        document.getElementById('itemPhotoInput').value = '';
+        showToast('Image file size must be 5 MB or smaller.', true);
+        removePhoto();
+        return;
+      }
+      if (!['image/jpeg', 'image/png', 'image/gif', 'image/webp'].includes(file.type)) {
+        showToast('Choose a JPEG, PNG, GIF, or WebP image.', true);
+        removePhoto();
         return;
       }
 
-      const reader = new FileReader();
-      reader.onload = function(evt) {
-        currentPhotoBase64 = evt.target.result;
-        document.getElementById('photoPreviewImg').src = currentPhotoBase64;
-        document.getElementById('photoPreviewBox').style.display = 'block';
-      };
-      reader.readAsDataURL(file);
+      removePhoto();
+      selectedPhotoFile = file;
+      currentPhotoPreviewUrl = URL.createObjectURL(file);
+      document.getElementById('photoPreviewImg').src = currentPhotoPreviewUrl;
+      document.getElementById('photoPreviewBox').style.display = 'block';
     }
 
     function removePhoto() {
-      currentPhotoBase64 = '';
+      selectedPhotoFile = null;
+      if (currentPhotoPreviewUrl) URL.revokeObjectURL(currentPhotoPreviewUrl);
+      currentPhotoPreviewUrl = '';
       const input = document.getElementById('itemPhotoInput');
       if (input) input.value = '';
       document.getElementById('photoPreviewBox').style.display = 'none';
@@ -1904,23 +1912,21 @@
       const desc = document.getElementById('itemDesc').value.trim();
       const verification = document.getElementById('itemVerification').value.trim();
 
-      const payload = {
-        title,
-        category,
-        type,
-        location,
-        locationDetails,
-        contact,
-        desc,
-        verification,
-        photo: currentPhotoBase64
-      };
+      const payload = new FormData();
+      payload.append('title', title);
+      payload.append('category', category);
+      payload.append('type', type);
+      payload.append('location', location);
+      payload.append('locationDetails', locationDetails);
+      payload.append('contact', contact);
+      payload.append('desc', desc);
+      payload.append('verification', verification);
+      if (selectedPhotoFile) payload.append('photo', selectedPhotoFile);
 
       try {
         const res = await fetch('/api/items', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(payload)
+          body: payload
         });
 
         const data = await res.json();
@@ -1999,17 +2005,14 @@
       closeDeleteModal();
 
       try {
-        const res = await fetch(`/api/items/${id}`, { method: 'DELETE' });
-        const data = await res.json();
-        if (data.success) {
-          fetchStats();
-          fetchAndRenderItems();
-          showToast('Report permanently removed.');
-        } else {
-          showToast(data.message || 'Permission denied.', true);
-        }
+        const response = await fetch(`/api/items/${id}`, { method: 'DELETE' });
+        const data = await response.json();
+        if (!response.ok || !data.success) throw new Error(data.message || 'Permission denied.');
+        fetchStats();
+        fetchAndRenderItems();
+        showToast('Report permanently removed.');
       } catch (err) {
-        showToast('Error removing report.', true);
+        showToast(err.message || 'Error removing report.', true);
       }
     }
 
@@ -2020,6 +2023,7 @@
     function openClaimModal(id) {
       const item = loadedItems.find(i => String(i.id) === String(id));
       if (!item) return;
+      claimRequestMode = false;
       targetClaimId = id;
 
       const titleEl = document.getElementById('claimModalTitle');
@@ -2029,8 +2033,11 @@
       const proofGroup = document.getElementById('claimProofGroup');
       const proofInput = document.getElementById('claimProofInput');
       const btnEl = document.getElementById('claimModalBtn');
+      const proofLabel = document.querySelector('label[for="claimProofInput"]');
 
       proofInput.value = '';
+      proofLabel.textContent = 'Claimant Proof / Verification Answer';
+      proofInput.placeholder = 'Enter proof, ID details, or verification answer...';
 
       if (item.claimed) {
         titleEl.innerText = 'Restore Item to Active Status';
@@ -2055,31 +2062,60 @@
       document.getElementById('claimConfirmModal').classList.add('open');
     }
 
+    function openClaimRequestModal(id) {
+      const item = loadedItems.find(i => String(i.id) === String(id));
+      if (!item || item.type !== 'found' || item.claimed) return;
+      if (!currentUser) {
+        window.location.href = '/login';
+        return;
+      }
+
+      claimRequestMode = true;
+      targetClaimId = id;
+      document.getElementById('claimModalTitle').innerText = 'Request this item';
+      document.getElementById('claimModalSubtitle').innerText = 'Describe identifying details only the rightful owner would know. Only moderators can view your response.';
+      document.getElementById('claimVerificationBox').style.display = 'none';
+      document.getElementById('claimProofGroup').style.display = 'block';
+      document.querySelector('label[for="claimProofInput"]').textContent = 'Private ownership details';
+      const proofInput = document.getElementById('claimProofInput');
+      proofInput.value = '';
+      proofInput.placeholder = 'Describe a mark, contents, or other private identifying detail';
+      document.getElementById('claimModalBtn').innerText = 'Submit Request';
+      document.getElementById('claimConfirmModal').classList.add('open');
+    }
+
     function closeClaimModal() {
       document.getElementById('claimConfirmModal').classList.remove('open');
       targetClaimId = null;
+      claimRequestMode = false;
     }
 
     async function executeClaimToggle() {
       if (!targetClaimId) return;
       const id = targetClaimId;
       const proof = document.getElementById('claimProofInput').value.trim();
+      const isRequest = claimRequestMode;
+      if (isRequest && (proof.length < 5 || proof.length > 500)) {
+        showToast('Enter ownership details between 5 and 500 characters.', true);
+        return;
+      }
       closeClaimModal();
 
       try {
-        const res = await fetch(`/api/items/${id}/claim`, {
-          method: 'PATCH',
+        const response = await fetch(isRequest ? `/api/items/${id}/claim-requests` : `/api/items/${id}/claim`, {
+          method: isRequest ? 'POST' : 'PATCH',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ proof })
         });
-        const data = await res.json();
-        if (data.success) {
+        const data = await response.json();
+        if (!response.ok || !data.success) throw new Error(data.message || 'Unable to update item status.');
+        if (!isRequest) {
           fetchStats();
           fetchAndRenderItems();
-          showToast(data.message);
         }
-      } catch (err) {
-        showToast('Failed to update status on server.', true);
+        showToast(data.message);
+      } catch (error) {
+        showToast(error.message || (isRequest ? 'Failed to submit the claim request.' : 'Failed to update status.'), true);
       }
     }
 
@@ -2147,6 +2183,14 @@
       checkAuthSession();
       fetchStats();
       fetchAndRenderItems();
+
+      const reportType = new URLSearchParams(window.location.search).get('report');
+      if (reportType === 'lost' || reportType === 'found') {
+        const typeInput = document.querySelector(`input[name="itemType"][value="${reportType}"]`);
+        if (typeInput) typeInput.checked = true;
+        updateTypeRadio();
+        document.getElementById('itemForm').scrollIntoView({ behavior: 'smooth' });
+      }
 
       // Close mobile menu on outside click or nav link click
       const links = document.getElementById('navLinks');

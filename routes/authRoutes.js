@@ -6,7 +6,18 @@ const path = require('path');
 const bcrypt = require('bcryptjs');
 const { validateUserAuth, sanitizeString } = require('../middleware/validate');
 
-const USERS_FILE = path.join(__dirname, '..', 'data', 'users.json');
+const DATA_DIR = process.env.DATA_DIR || path.join(__dirname, '..', 'data');
+const USERS_FILE = path.join(DATA_DIR, 'users.json');
+
+function authenticateSession(req, user) {
+  return new Promise((resolve, reject) => {
+    req.session.regenerate(error => {
+      if (error) return reject(error);
+      req.session.user = user;
+      resolve();
+    });
+  });
+}
 
 function getUsers() {
   try {
@@ -78,8 +89,7 @@ router.post('/register', validateUserAuth, async (req, res) => {
     users.push(newUser);
     saveUsers(users);
 
-    // Auto-login session
-    req.session.user = {
+    const sessionUser = {
       id: newUser.id,
       email: newUser.email,
       fullName: newUser.fullName,
@@ -87,11 +97,12 @@ router.post('/register', validateUserAuth, async (req, res) => {
       department: newUser.department,
       studentId: newUser.studentId
     };
+    await authenticateSession(req, sessionUser);
 
     res.status(201).json({
       success: true,
       message: 'Account registered successfully.',
-      user: req.session.user
+      user: sessionUser
     });
   } catch (error) {
     res.status(500).json({
@@ -131,7 +142,7 @@ router.post('/login', validateUserAuth, async (req, res) => {
       });
     }
 
-    req.session.user = {
+    const sessionUser = {
       id: user.id,
       email: user.email,
       fullName: user.fullName,
@@ -139,11 +150,12 @@ router.post('/login', validateUserAuth, async (req, res) => {
       department: user.department,
       studentId: user.studentId
     };
+    await authenticateSession(req, sessionUser);
 
     res.json({
       success: true,
       message: 'Login successful.',
-      user: req.session.user
+      user: sessionUser
     });
   } catch (error) {
     res.status(500).json({

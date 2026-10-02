@@ -3,10 +3,71 @@ const express = require('express');
 const router = express.Router();
 const fs = require('fs');
 const path = require('path');
+const crypto = require('crypto');
+const multer = require('multer');
 const { validateItemReport, sanitizeString } = require('../middleware/validate');
 const { requireAuth, requireRole } = require('../middleware/auth');
 
-const ITEMS_FILE = path.join(__dirname, '..', 'data', 'items.json');
+const DATA_DIR = process.env.DATA_DIR || path.join(__dirname, '..', 'data');
+const ITEMS_FILE = path.join(DATA_DIR, 'items.json');
+const CLAIMS_FILE = path.join(DATA_DIR, 'claims.json');
+const UPLOADS_DIR = path.join(DATA_DIR, 'uploads');
+const IMAGE_EXTENSIONS = {
+  'image/jpeg': 'jpg',
+  'image/png': 'png',
+  'image/gif': 'gif',
+  'image/webp': 'webp'
+};
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 5 * 1024 * 1024, files: 1 },
+  fileFilter(req, file, callback) {
+    if (!IMAGE_EXTENSIONS[file.mimetype]) {
+      return callback(Object.assign(new Error('Upload a JPEG, PNG, GIF, or WebP image.'), { status: 400 }));
+    }
+    callback(null, true);
+  }
+});
+
+function isValidImage(file) {
+  const bytes = file.buffer;
+  if (file.mimetype === 'image/jpeg') return bytes[0] === 0xff && bytes[1] === 0xd8 && bytes[2] === 0xff;
+  if (file.mimetype === 'image/png') return bytes.subarray(0, 8).equals(Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]));
+  if (file.mimetype === 'image/gif') return ['GIF87a', 'GIF89a'].includes(bytes.toString('ascii', 0, 6));
+  if (file.mimetype === 'image/webp') return bytes.toString('ascii', 0, 4) === 'RIFF' && bytes.toString('ascii', 8, 12) === 'WEBP';
+  return false;
+}
+
+function saveUploadedImage(file) {
+  fs.mkdirSync(UPLOADS_DIR, { recursive: true });
+  const filename = `${crypto.randomUUID()}.${IMAGE_EXTENSIONS[file.mimetype]}`;
+  fs.writeFileSync(path.join(UPLOADS_DIR, filename), file.buffer, { flag: 'wx' });
+  return `/uploads/${filename}`;
+}
+
+function publicItemView(item, potentialMatch = null) {
+  return {
+    id: item.id,
+    refCode: item.refCode,
+    title: item.title,
+    category: item.category,
+    type: item.type,
+    location: item.location,
+    desc: item.desc || item.description || '',
+    photo: item.photo || item.imageUrl || '',
+    date: item.date,
+    createdAt: item.createdAt,
+    status: item.status,
+    claimed: Boolean(item.claimed),
+    claimedAt: item.claimedAt || null,
+    potentialMatch: potentialMatch ? {
+      id: potentialMatch.id,
+      title: potentialMatch.title,
+      location: potentialMatch.location,
+      type: potentialMatch.type
+    } : null
+  };
+}
 
 function getItems() {
   try {
@@ -19,6 +80,18 @@ function getItems() {
 
 function saveItems(items) {
   fs.writeFileSync(ITEMS_FILE, JSON.stringify(items, null, 2), 'utf8');
+}
+
+function getClaims() {
+  try {
+    return JSON.parse(fs.readFileSync(CLAIMS_FILE, 'utf8'));
+  } catch (err) {
+    return [];
+  }
+}
+
+function saveClaims(claims) {
+  fs.writeFileSync(CLAIMS_FILE, JSON.stringify(claims, null, 2), 'utf8');
 }
 
 // Helper: Smart Match & Reconciliation Detector
@@ -141,6 +214,52 @@ router.get('/stats', (req, res) => {
   });
 });
 
+router.get('/claims', requireRole('admin'), (req, res) => {
+  const claims = getClaims().sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+  res.json({ success: true, claims });
+});
+
+router.patch('/claims/:claimId', requireRole('admin'), (req, res) => {
+  const { status } = req.body;
+  if (!['approved', 'rejected'].includes(status)) {
+    return res.status(400).json({ success: false, message: 'Claim status must be approved or rejected.' });
+  }
+
+  const claims = getClaims();
+  const claim = claims.find(entry => entry.id === req.params.claimId);
+  if (!claim) return res.status(404).json({ success: false, message: 'Claim request not found.' });
+  if (claim.status !== 'pending') {
+    return res.status(409).json({ success: false, message: 'This claim request has already been reviewed.' });
+  }
+
+  const items = getItems();
+  const item = items.find(entry => String(entry.id) === String(claim.itemId));
+  if (!item || item.claimed) {
+    return res.status(409).json({ success: false, message: 'The item is no longer available.' });
+  }
+
+  claim.status = status;
+  claim.reviewedAt = new Date().toISOString();
+  claim.reviewedBy = req.session.user.id;
+  if (status === 'approved') {
+    item.claimed = true;
+    item.status = 'claimed';
+    item.claimedAt = claim.reviewedAt;
+    item.claimantProof = claim.proof;
+    claims.forEach(other => {
+      if (other.itemId === claim.itemId && other.id !== claim.id && other.status === 'pending') {
+        other.status = 'rejected';
+        other.reviewedAt = claim.reviewedAt;
+        other.reviewedBy = req.session.user.id;
+      }
+    });
+    saveItems(items);
+  }
+  saveClaims(claims);
+
+  res.json({ success: true, message: `Claim request ${status}.`, claim });
+});
+
 // GET /api/items - Retrieve items with filters
 router.get('/', (req, res) => {
   let items = getItems();
@@ -171,23 +290,23 @@ router.get('/', (req, res) => {
 
   // Category filter
   if (category) {
-    items = items.filter(i => i.category.toLowerCase() === category.toLowerCase());
+    items = items.filter(i => (i.category || '').toLowerCase() === category.toLowerCase());
   }
 
   // Location filter
   if (location) {
     const locFilter = location.toLowerCase();
-    items = items.filter(i => i.location.toLowerCase().includes(locFilter));
+    items = items.filter(i => (i.location || '').toLowerCase().includes(locFilter));
   }
 
   // Search keyword filter
   if (search) {
     const q = search.toLowerCase().trim();
     items = items.filter(i =>
-      i.title.toLowerCase().includes(q) ||
-      i.desc.toLowerCase().includes(q) ||
-      i.location.toLowerCase().includes(q) ||
-      i.category.toLowerCase().includes(q) ||
+      (i.title || '').toLowerCase().includes(q) ||
+      (i.desc || i.description || '').toLowerCase().includes(q) ||
+      (i.location || '').toLowerCase().includes(q) ||
+      (i.category || '').toLowerCase().includes(q) ||
       (i.refCode && i.refCode.toLowerCase().includes(q))
     );
   }
@@ -196,10 +315,11 @@ router.get('/', (req, res) => {
   const allItems = getItems();
   const enhancedItems = items.map(item => {
     const match = findMatch(item, allItems);
-    return {
-      ...item,
-      potentialMatch: match ? { id: match.id, title: match.title, location: match.location, type: match.type } : null
-    };
+    const user = req.session?.user;
+    const canViewPrivateFields = user && (user.role === 'admin' || item.reportedBy === user.id);
+    return canViewPrivateFields
+      ? { ...item, potentialMatch: match ? { id: match.id, title: match.title, location: match.location, type: match.type } : null }
+      : publicItemView(item, match);
   });
 
   res.json({
@@ -213,10 +333,7 @@ router.get('/', (req, res) => {
 router.get('/qr-lookup/:refCode', (req, res) => {
   const items = getItems();
   const searchRef = req.params.refCode.toUpperCase().trim();
-  const item = items.find(i =>
-    (i.refCode && i.refCode.toUpperCase().trim() === searchRef) ||
-    String(i.id) === searchRef
-  );
+  const item = items.find(i => i.refCode && i.refCode.toUpperCase().trim() === searchRef);
 
   if (!item) {
     return res.status(404).json({ success: false, message: 'Item not found for this QR code.' });
@@ -226,7 +343,6 @@ router.get('/qr-lookup/:refCode', (req, res) => {
   res.json({
     success: true,
     item: {
-      id: item.id,
       refCode: item.refCode,
       title: item.title,
       category: item.category,
@@ -245,19 +361,22 @@ router.post('/anonymous-notify', (req, res) => {
     if (!refCode || !message) {
       return res.status(400).json({ success: false, message: 'Reference code and message are required.' });
     }
+    if (String(message).length > 1000 || String(locationFound || '').length > 150 || String(finderContact || '').length > 150) {
+      return res.status(400).json({ success: false, message: 'Finder message fields exceed the allowed length.' });
+    }
 
     const items = getItems();
     const searchRef = refCode.toUpperCase().trim();
-    const itemIndex = items.findIndex(i =>
-      (i.refCode && i.refCode.toUpperCase().trim() === searchRef) ||
-      String(i.id) === searchRef
-    );
+    const itemIndex = items.findIndex(i => i.refCode && i.refCode.toUpperCase().trim() === searchRef);
 
     if (itemIndex === -1) {
       return res.status(404).json({ success: false, message: 'Item not found with this reference code.' });
     }
 
     const item = items[itemIndex];
+    if (item.type !== 'registered') {
+      return res.status(404).json({ success: false, message: 'Registered belonging not found.' });
+    }
     if (!item.notifications) item.notifications = [];
 
     const newNotification = {
@@ -272,6 +391,7 @@ router.post('/anonymous-notify', (req, res) => {
     };
 
     item.notifications.unshift(newNotification);
+    item.notifications = item.notifications.slice(0, 100);
     saveItems(items);
 
     res.json({
@@ -343,11 +463,17 @@ router.patch('/notifications/:notifId/read', requireAuth, (req, res) => {
 router.get('/:id', (req, res) => {
   const items = getItems();
   const item = items.find(i => String(i.id) === String(req.params.id));
-  if (!item) {
+  const user = req.session?.user;
+  const canViewPrivateFields = user && (user.role === 'admin' || item?.reportedBy === user.id);
+  if (!item || (item.type === 'registered' && !canViewPrivateFields)) {
     return res.status(404).json({ success: false, message: 'Item not found.' });
   }
 
   const match = findMatch(item, items);
+  if (item.type !== 'registered' && !canViewPrivateFields) {
+    return res.json({ success: true, item: publicItemView(item, match) });
+  }
+
   res.json({
     success: true,
     item: {
@@ -357,14 +483,61 @@ router.get('/:id', (req, res) => {
   });
 });
 
+router.post('/:id/claim-requests', requireAuth, (req, res) => {
+  const proof = sanitizeString(req.body.proof || '');
+  if (proof.length < 5 || proof.length > 500) {
+    return res.status(400).json({ success: false, message: 'Ownership details must be between 5 and 500 characters.' });
+  }
+
+  const items = getItems();
+  const item = items.find(entry => String(entry.id) === String(req.params.id));
+  if (!item || item.type !== 'found' || item.claimed) {
+    return res.status(404).json({ success: false, message: 'Found item is no longer available for a claim.' });
+  }
+  if (item.reportedBy === req.session.user.id) {
+    return res.status(403).json({ success: false, message: 'You cannot submit a claim for your own report.' });
+  }
+
+  const claims = getClaims();
+  const duplicate = claims.some(claim =>
+    String(claim.itemId) === String(item.id) &&
+    claim.claimantId === req.session.user.id &&
+    claim.status === 'pending'
+  );
+  if (duplicate) {
+    return res.status(409).json({ success: false, message: 'You already have a pending claim for this item.' });
+  }
+
+  const claim = {
+    id: `claim-${crypto.randomUUID()}`,
+    itemId: item.id,
+    itemTitle: item.title,
+    itemRefCode: item.refCode,
+    claimantId: req.session.user.id,
+    claimantName: req.session.user.fullName,
+    claimantEmail: req.session.user.email,
+    proof,
+    status: 'pending',
+    createdAt: new Date().toISOString()
+  };
+  claims.unshift(claim);
+  saveClaims(claims);
+
+  res.status(201).json({ success: true, message: 'Claim request submitted for moderator review.', claim: { id: claim.id, status: claim.status } });
+});
+
 // POST /api/items - Create item report
-router.post('/', validateItemReport, (req, res) => {
+router.post('/', upload.single('photo'), validateItemReport, (req, res) => {
   try {
     const items = getItems();
     const nextSeq = items.length + 1;
     const refCode = `CSPC-LF-2026-${String(nextSeq).padStart(3, '0')}`;
 
-    const { title, category, type, location, locationDetails, contact, desc, verification, photo } = req.body;
+    const { title, category, type, location, locationDetails, contact, desc, verification } = req.body;
+    if (req.file && !isValidImage(req.file)) {
+      return res.status(400).json({ success: false, message: 'The uploaded file is not a valid supported image.' });
+    }
+    const photo = req.file ? saveUploadedImage(req.file) : '';
 
     const newItem = {
       id: Date.now(),
@@ -402,7 +575,7 @@ router.post('/', validateItemReport, (req, res) => {
 });
 
 // PATCH /api/items/:id/claim - Claim or restore item
-router.patch('/:id/claim', (req, res) => {
+router.patch('/:id/claim', requireRole('admin'), (req, res) => {
   const items = getItems();
   const itemIndex = items.findIndex(i => String(i.id) === String(req.params.id));
   if (itemIndex === -1) {
@@ -446,6 +619,10 @@ router.delete('/:id', requireRole('admin'), (req, res) => {
 
   items = items.filter(i => String(i.id) !== String(req.params.id));
   saveItems(items);
+  if (typeof item.photo === 'string' && item.photo.startsWith('/uploads/')) {
+    fs.rmSync(path.join(UPLOADS_DIR, path.basename(item.photo)), { force: true });
+  }
+  saveClaims(getClaims().filter(claim => String(claim.itemId) !== String(item.id)));
 
   res.json({ success: true, message: 'Item report deleted.' });
 });
@@ -454,7 +631,7 @@ router.delete('/:id', requireRole('admin'), (req, res) => {
 router.post('/register-belonging', requireAuth, (req, res) => {
   try {
     const items = getItems();
-    const { title, category, location, identifiers, instructions, photo } = req.body;
+    const { title, category, location, identifiers, instructions } = req.body;
 
     if (!title || !category) {
       return res.status(400).json({ success: false, message: 'Title and category are required.' });
@@ -476,7 +653,7 @@ router.post('/register-belonging', requireAuth, (req, res) => {
       contact: `${user.fullName} (${user.studentId || user.email})`,
       desc: identifiers ? `Valuable belonging: ${sanitizeString(identifiers)}` : 'Valuable personal belonging registered in student vault.',
       verification: identifiers || 'Registered by verified CSPC account',
-      photo: photo || '',
+      photo: '',
       date: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
       status: 'registered',
       claimed: false,

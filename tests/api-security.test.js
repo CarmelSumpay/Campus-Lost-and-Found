@@ -1,0 +1,274 @@
+const assert = require('node:assert/strict');
+const fs = require('node:fs');
+const os = require('node:os');
+const path = require('node:path');
+const test = require('node:test');
+const bcrypt = require('bcryptjs');
+
+let dataDir;
+let appServer;
+let baseUrl;
+let createApp;
+
+const adminPassword = 'AdminPass1!';
+const studentPassword = 'StudentPass1!';
+
+function fixtureUser(id, email, password, role) {
+  return {
+    id,
+    email,
+    passwordHash: bcrypt.hashSync(password, 4),
+    fullName: role === 'admin' ? 'CSPC Admin' : 'Test Student',
+    studentId: role === 'admin' ? 'N/A' : '2026001',
+    role,
+    department: 'CCS',
+    createdAt: new Date().toISOString()
+  };
+}
+
+async function login(email, password) {
+  const response = await fetch(`${baseUrl}/api/auth/login`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email, password })
+  });
+  assert.equal(response.status, 200);
+  return response.headers.get('set-cookie').split(';')[0];
+}
+
+function reportFormData(photo) {
+  const form = new FormData();
+  form.set('title', 'Test umbrella');
+  form.set('category', 'Others');
+  form.set('type', 'lost');
+  form.set('location', 'Main Building');
+  form.set('contact', 'test@example.edu');
+  form.set('desc', 'Black umbrella with a wooden handle.');
+  form.set('verification', 'Private mark on the handle');
+  if (photo) form.set('photo', photo, 'test-image.png');
+  return form;
+}
+
+test.before(async () => {
+  dataDir = fs.mkdtempSync(path.join(os.tmpdir(), 'cspc-lostfound-test-'));
+  process.env.DATA_DIR = dataDir;
+  process.env.NODE_ENV = 'test';
+  process.env.SESSION_SECRET = 'test-only-session-secret';
+
+  const users = [
+    fixtureUser('admin-test', 'admin@cspc.edu.ph', adminPassword, 'admin'),
+    fixtureUser('student-test', 'student@my.cspc.edu.ph', studentPassword, 'student')
+  ];
+  fs.writeFileSync(path.join(dataDir, 'users.json'), JSON.stringify(users));
+  fs.writeFileSync(path.join(dataDir, 'items.json'), JSON.stringify([
+    {
+      id: 11,
+      refCode: 'CSPC-LF-2026-011',
+      title: 'Found umbrella',
+      category: 'Others',
+      type: 'found',
+      location: 'Main Building',
+      desc: 'Black umbrella with a wooden handle.',
+      contact: 'private-contact@example.edu',
+      verification: 'Private serial clue',
+      claimantProof: 'Private claim proof',
+      reportedBy: 'reporter-test',
+      status: 'active',
+      claimed: false,
+      createdAt: new Date().toISOString()
+    },
+    {
+      id: 12,
+      refCode: 'CSPC-REG-QR-0012',
+      title: 'Registered laptop',
+      category: 'Electronics',
+      type: 'registered',
+      location: 'Library',
+      contact: 'Owner Name (owner@example.edu)',
+      ownerEmail: 'owner@example.edu',
+      reportedBy: 'student-test',
+      notifications: [],
+      status: 'registered',
+      claimed: false
+    },
+    {
+      id: 13,
+      refCode: 'CSPC-LF-2026-013',
+      title: 'Found notebook',
+      category: 'Books & Documents',
+      type: 'found',
+      location: 'Library',
+      desc: 'Green notebook with a fabric cover.',
+      contact: 'notebook-reporter@example.edu',
+      verification: 'Private page detail',
+      reportedBy: 'reporter-test',
+      status: 'active',
+      claimed: false
+    }
+  ]));
+
+  ({ createApp } = require('../server'));
+  appServer = createApp().listen(0);
+  await new Promise(resolve => appServer.once('listening', resolve));
+  baseUrl = `http://127.0.0.1:${appServer.address().port}`;
+});
+
+test.after(async () => {
+  if (appServer) await new Promise((resolve, reject) => appServer.close(error => error ? reject(error) : resolve()));
+  fs.rmSync(dataDir, { recursive: true, force: true });
+  delete process.env.DATA_DIR;
+  delete process.env.SESSION_SECRET;
+  process.env.NODE_ENV = 'development';
+});
+
+test('public item responses exclude private fields', async () => {
+  for (const privatePath of ['/data/users.json', '/routes/authRoutes.js', '/server.js', '/package.json']) {
+    const response = await fetch(`${baseUrl}${privatePath}`);
+    assert.equal(response.status, 404, `${privatePath} should not be publicly served`);
+  }
+
+  const response = await fetch(`${baseUrl}/api/items`);
+  assert.equal(response.status, 200);
+  const { items } = await response.json();
+  assert.equal(items.length, 2);
+  for (const field of ['contact', 'verification', 'claimantProof', 'reportedBy', 'notifications', 'ownerEmail']) {
+    assert.equal(Object.hasOwn(items[0], field), false, `public response should omit ${field}`);
+  }
+});
+
+test('registered belongings are private except through QR reference lookup', async () => {
+  const directResponse = await fetch(`${baseUrl}/api/items/12`);
+  assert.equal(directResponse.status, 404);
+
+  const idLookup = await fetch(`${baseUrl}/api/items/qr-lookup/12`);
+  assert.equal(idLookup.status, 404);
+
+  const qrResponse = await fetch(`${baseUrl}/api/items/qr-lookup/CSPC-REG-QR-0012`);
+  assert.equal(qrResponse.status, 200);
+  const { item } = await qrResponse.json();
+  assert.equal(item.isRegisteredBelonging, true);
+  assert.equal(Object.hasOwn(item, 'id'), false);
+  assert.equal(Object.hasOwn(item, 'ownerEmail'), false);
+});
+
+test('private registered records are visible to their owner only', async () => {
+  const studentCookie = await login('student@my.cspc.edu.ph', studentPassword);
+  const ownResponse = await fetch(`${baseUrl}/api/items/12`, { headers: { Cookie: studentCookie } });
+  assert.equal(ownResponse.status, 200);
+  assert.equal((await ownResponse.json()).item.ownerEmail, 'owner@example.edu');
+});
+
+test('only admins can change claim status', async () => {
+  const anonymousResponse = await fetch(`${baseUrl}/api/items/11/claim`, { method: 'PATCH' });
+  assert.equal(anonymousResponse.status, 401);
+
+  const studentCookie = await login('student@my.cspc.edu.ph', studentPassword);
+  const studentResponse = await fetch(`${baseUrl}/api/items/11/claim`, {
+    method: 'PATCH',
+    headers: { Cookie: studentCookie, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ proof: 'checked' })
+  });
+  assert.equal(studentResponse.status, 403);
+
+  const adminCookie = await login('admin@cspc.edu.ph', adminPassword);
+  const adminResponse = await fetch(`${baseUrl}/api/items/11/claim`, {
+    method: 'PATCH',
+    headers: { Cookie: adminCookie, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ proof: 'checked' })
+  });
+  assert.equal(adminResponse.status, 200);
+  assert.equal((await adminResponse.json()).item.claimed, true);
+});
+
+test('claim requests are private and require moderator review', async () => {
+  const studentCookie = await login('student@my.cspc.edu.ph', studentPassword);
+  const requestResponse = await fetch(`${baseUrl}/api/items/13/claim-requests`, {
+    method: 'POST',
+    headers: { Cookie: studentCookie, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ proof: 'A small university logo is on the inside cover.' })
+  });
+  assert.equal(requestResponse.status, 201);
+  const requestData = await requestResponse.json();
+  assert.equal(Object.hasOwn(requestData.claim, 'proof'), false);
+
+  const duplicateResponse = await fetch(`${baseUrl}/api/items/13/claim-requests`, {
+    method: 'POST',
+    headers: { Cookie: studentCookie, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ proof: 'Another private detail about this notebook.' })
+  });
+  assert.equal(duplicateResponse.status, 409);
+
+  const studentClaimsResponse = await fetch(`${baseUrl}/api/items/claims`, { headers: { Cookie: studentCookie } });
+  assert.equal(studentClaimsResponse.status, 403);
+
+  const adminCookie = await login('admin@cspc.edu.ph', adminPassword);
+  const adminClaimsResponse = await fetch(`${baseUrl}/api/items/claims`, { headers: { Cookie: adminCookie } });
+  assert.equal(adminClaimsResponse.status, 200);
+  const { claims } = await adminClaimsResponse.json();
+  assert.equal(claims.length, 1);
+  assert.match(claims[0].proof, /university logo/);
+
+  const reviewResponse = await fetch(`${baseUrl}/api/items/claims/${encodeURIComponent(claims[0].id)}`, {
+    method: 'PATCH',
+    headers: { Cookie: adminCookie, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ status: 'approved' })
+  });
+  assert.equal(reviewResponse.status, 200);
+
+  const itemResponse = await fetch(`${baseUrl}/api/items/13`);
+  assert.equal((await itemResponse.json()).item.claimed, true);
+});
+
+test('image upload stores a bounded image file and rejects invalid uploads', async () => {
+  const pngBytes = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+/l2sAAAAASUVORK5CYII=', 'base64');
+  const validResponse = await fetch(`${baseUrl}/api/items`, {
+    method: 'POST',
+    body: reportFormData(new Blob([pngBytes], { type: 'image/png' }))
+  });
+  assert.equal(validResponse.status, 201);
+  const { item } = await validResponse.json();
+  assert.match(item.photo, /^\/uploads\/[a-f0-9-]+\.png$/);
+  assert.equal(fs.existsSync(path.join(dataDir, 'uploads', path.basename(item.photo))), true);
+
+  const invalidResponse = await fetch(`${baseUrl}/api/items`, {
+    method: 'POST',
+    body: reportFormData(new Blob([Buffer.from('not an image')], { type: 'image/png' }))
+  });
+  assert.equal(invalidResponse.status, 400);
+
+  const oversizedResponse = await fetch(`${baseUrl}/api/items`, {
+    method: 'POST',
+    body: reportFormData(new Blob([Buffer.alloc(5 * 1024 * 1024 + 1)], { type: 'image/png' }))
+  });
+  assert.equal(oversizedResponse.status, 413);
+});
+
+test('production requires a secret and persists secure sessions', async () => {
+  process.env.NODE_ENV = 'production';
+  delete process.env.SESSION_SECRET;
+  assert.throws(createApp, /SESSION_SECRET must be configured in production/);
+
+  process.env.SESSION_SECRET = 'production-test-session-secret';
+  const productionServer = createApp().listen(0);
+  await new Promise(resolve => productionServer.once('listening', resolve));
+  try {
+    const productionUrl = `http://127.0.0.1:${productionServer.address().port}`;
+    const loginResponse = await fetch(`${productionUrl}/api/auth/login`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-Forwarded-Proto': 'https' },
+      body: JSON.stringify({ email: 'admin@cspc.edu.ph', password: adminPassword })
+    });
+    assert.equal(loginResponse.status, 200, await loginResponse.clone().text());
+    const cookieHeader = loginResponse.headers.get('set-cookie');
+    assert.match(cookieHeader, /Secure/i);
+    assert.match(cookieHeader, /SameSite=Lax/i);
+    const sessionCookie = cookieHeader.split(';')[0];
+    const sessionResponse = await fetch(`${productionUrl}/api/auth/me`, { headers: { Cookie: sessionCookie } });
+    assert.equal((await sessionResponse.json()).authenticated, true);
+    assert.ok(fs.readdirSync(path.join(dataDir, 'sessions')).length > 0);
+  } finally {
+    await new Promise((resolve, reject) => productionServer.close(error => error ? reject(error) : resolve()));
+    process.env.NODE_ENV = 'test';
+    process.env.SESSION_SECRET = 'test-only-session-secret';
+  }
+});
