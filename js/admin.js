@@ -1,0 +1,528 @@
+let deleteTargetId = null;
+    let activeTab = 'items';
+    let adminItems = [];
+    let claimRequests = [];
+    let adminClaimsSignature = null;
+    let activeClaimReviewId = null;
+    let adminRefreshInProgress = false;
+    let adminItemsSignature = null;
+    let cachedServerItems = [];
+    const adminItemsPerPage = 10;
+    let adminCurrentPage = 1;
+
+    document.addEventListener('DOMContentLoaded', () => {
+      initNav();
+      refreshAdminItems();
+      renderClaimsTab();
+      window.setInterval(() => {
+        refreshAdminItems();
+        refreshAdminClaims();
+      }, 5000);
+
+      document.getElementById('adminClaimsNavLink').addEventListener('click', event => {
+        event.preventDefault();
+        openAdminClaims();
+      });
+      document.querySelectorAll('[data-admin-filter]').forEach(link => {
+        link.addEventListener('click', event => {
+          event.preventDefault();
+          showAdminItems(link.dataset.adminFilter);
+        });
+      });
+
+    // Tabs
+      document.querySelectorAll('.admin-tab').forEach(tab => {
+        tab.addEventListener('click', () => {
+          activeTab = tab.dataset.tab;
+          document.querySelectorAll('.admin-tab').forEach(t => t.classList.remove('active'));
+          tab.classList.add('active');
+          document.getElementById('tabItems').style.display  = activeTab === 'items'  ? 'block' : 'none';
+          document.getElementById('tabClaims').style.display = activeTab === 'claims' ? 'block' : 'none';
+          if (activeTab === 'claims') renderClaimsTab();
+        });
+      });
+
+      // Delete modal controls
+      document.getElementById('cancelDelete').addEventListener('click',  closeDeleteModal);
+      document.getElementById('confirmDelete').addEventListener('click', doDelete);
+      document.getElementById('deleteModal').addEventListener('click', e => {
+        if (e.target === document.getElementById('deleteModal')) closeDeleteModal();
+      });
+
+      // Export CSV
+      document.getElementById('exportBtn').addEventListener('click', exportCSV);
+
+      // Reactive admin filters
+      ['adminSearch','adminFilterType','adminFilterStatus'].forEach(id => {
+        document.getElementById(id).addEventListener('input', () => {
+          adminCurrentPage = 1;
+          renderItemsTable();
+        });
+      });
+    });
+
+    function normalizeAdminItem(item) {
+      const normalized = { ...item };
+      normalized.status = item.status || item.type || 'pending';
+      normalized.desc = item.desc || item.description || '';
+      normalized.description = item.description || item.desc || '';
+      normalized.reporterName = item.reporterName || '';
+      normalized.reporterContact = item.reporterContact || item.contact || item.reporterEmail || '';
+      normalized.dateLost = item.dateLost || (item.type === 'lost' ? item.date || item.createdAt : '');
+      normalized.dateFound = item.dateFound || (item.type === 'found' ? item.date || item.createdAt : '');
+      return normalized;
+    }
+
+    async function refreshAdminItems() {
+      if (adminRefreshInProgress) return;
+      adminRefreshInProgress = true;
+      try {
+        try {
+          const response = await fetch('/api/items', { cache: 'no-store' });
+          if (response.ok) {
+            const data = await response.json();
+            if (data.success && Array.isArray(data.items)) {
+              cachedServerItems = data.items
+                .filter(item => item.type !== 'registered')
+                .map(normalizeAdminItem);
+            }
+          }
+        } catch (error) {
+          // Keep the last server snapshot when the API is temporarily unavailable.
+        }
+        const nextItems = [...cachedServerItems];
+        const nextSignature = JSON.stringify(nextItems);
+        if (nextSignature !== adminItemsSignature) {
+          adminItemsSignature = nextSignature;
+          adminItems = nextItems;
+          renderAdminPanel(adminItems);
+        }
+      } finally {
+        adminRefreshInProgress = false;
+      }
+    }
+
+    async function refreshAdminClaims() {
+      try {
+        const response = await fetch('/api/items/claims', { cache: 'no-store' });
+        const data = await response.json();
+        if (!response.ok || !data.success) return;
+        const nextSignature = JSON.stringify(data.claims);
+        if (nextSignature === adminClaimsSignature) return;
+        adminClaimsSignature = nextSignature;
+        claimRequests = data.claims;
+        renderItemsTable();
+        updateAdminNotificationBadge();
+        const claimsStat = document.querySelectorAll('#adminStats .stat-number')[5];
+        if (claimsStat) claimsStat.textContent = claimRequests.filter(claim => claim.status === 'pending').length;
+        if (activeTab === 'claims') renderClaimsTab();
+      } catch (error) {
+        // Keep the last claim snapshot when the API is temporarily unavailable.
+      }
+    }
+
+    function renderAdminPanel(items = adminItems) {
+      adminItems = items;
+      const lost    = items.filter(i => i.type==='lost').length;
+      const found   = items.filter(i => i.type==='found').length;
+      const claimed = items.filter(i => i.status==='claimed').length;
+      const pending = items.filter(i => i.status !== 'claimed').length;
+      const claims  = claimRequests.filter(claim => claim.status === 'pending').length;
+
+      document.getElementById('adminStats').innerHTML = `
+        <div class="stat-card"><div class="stat-number">${items.length}</div><div class="stat-label">Total Items</div></div>
+        <div class="stat-card"><div class="stat-number">${lost}</div><div class="stat-label">Lost</div></div>
+        <div class="stat-card"><div class="stat-number">${found}</div><div class="stat-label">Found</div></div>
+        <div class="stat-card"><div class="stat-number">${claimed}</div><div class="stat-label">Claimed</div></div>
+        <div class="stat-card"><div class="stat-number">${pending}</div><div class="stat-label">Pending</div></div>
+        <div class="stat-card"><div class="stat-number">${claims}</div><div class="stat-label">Claims</div></div>
+      `;
+
+      renderItemsTable();
+      updateAdminNotificationBadge();
+    }
+
+    function showAdminItems(type) {
+      if (activeTab !== 'items') document.querySelector('.admin-tab[data-tab="items"]').click();
+      document.getElementById('adminFilterType').value = type || '';
+      adminCurrentPage = 1;
+      renderItemsTable();
+      document.getElementById('tabItems').scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+
+    function openAdminClaims() {
+      document.querySelector('.admin-tab[data-tab="claims"]').click();
+      document.getElementById('tabClaims').scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+
+    function updateAdminNotificationBadge() {
+      const pendingCount = claimRequests.filter(claim => claim.status === 'pending').length;
+      const badge = document.getElementById('adminNotificationBadge');
+      badge.textContent = pendingCount > 99 ? '99+' : String(pendingCount);
+      badge.style.display = pendingCount ? 'inline-flex' : 'none';
+      badge.setAttribute('aria-label', `${pendingCount} pending claim requests`);
+    }
+
+    function openAdminLogoutModal() {
+      document.getElementById('adminLogoutModal').classList.add('open');
+    }
+
+    function closeAdminLogoutModal() {
+      document.getElementById('adminLogoutModal').classList.remove('open');
+    }
+
+    async function confirmAdminLogout() {
+      const button = document.getElementById('confirmAdminLogoutBtn');
+      button.disabled = true;
+      try {
+        const response = await fetch('/api/auth/logout', {
+          method: 'POST',
+          credentials: 'same-origin'
+        });
+        if (!response.ok) throw new Error('Logout request failed.');
+        window.location.href = '/login';
+      } catch (error) {
+        button.disabled = false;
+        showToast('Unable to log out. Please try again.', 'error');
+      }
+    }
+
+    function renderItemsTable() {
+      let items = getFilteredAdminItems();
+
+      // Sort newest first
+      items.sort((a,b) => new Date(b.createdAt)-new Date(a.createdAt));
+
+      const tbody = document.getElementById('adminTableBody');
+      const empty = document.getElementById('adminEmptyState');
+      const totalItems = items.length;
+      const totalPages = Math.ceil(totalItems / adminItemsPerPage);
+      adminCurrentPage = totalPages ? Math.min(adminCurrentPage, totalPages) : 1;
+      const startIndex = (adminCurrentPage - 1) * adminItemsPerPage;
+      const pageItems = items.slice(startIndex, startIndex + adminItemsPerPage);
+      renderItemsPagination(totalItems, totalPages, startIndex);
+
+      if (totalItems === 0) {
+        tbody.innerHTML = '';
+        empty.style.display = 'block';
+        return;
+      }
+      empty.style.display = 'none';
+
+      tbody.innerHTML = pageItems.map((item, idx) => {
+        const date = item.type === 'lost' ? formatDate(item.dateLost) : formatDate(item.dateFound);
+        const canClaim   = item.status !== 'claimed';
+        const canRestore = item.status === 'claimed';
+        const itemClaims = claimRequests.filter(claim => String(claim.itemId) === String(item.id));
+        const pendingClaim = itemClaims.find(claim => claim.status === 'pending');
+        const latestClaim = itemClaims[0];
+        const itemStatus = item.claimed || item.status === 'claimed'
+          ? '<span class="badge badge-claimed">Claimed</span>'
+          : pendingClaim
+            ? '<span class="badge admin-status-pending">Pending Verification</span>'
+            : latestClaim?.status === 'rejected'
+              ? '<span class="badge admin-status-rejected">Rejected · Available</span>'
+              : statusBadge(item.status);
+            const reporterValues = [...new Set([item.reporterName, item.reporterContact].filter(value => value && value !== '—'))];
+        const rowNumber = startIndex + idx + 1;
+        return `
+        <tr>
+          <td title="${rowNumber}">${rowNumber}</td>
+          <td class="td-title" title="${escHtml(item.title)}">
+            <a href="item-detail.html?id=${encodeURIComponent(item.id)}" target="_blank" title="${escHtml(item.title)}">${escHtml(item.title)}</a>
+          </td>
+          <td title="${escHtml(item.type)}"><span class="badge ${item.type === 'lost' ? 'badge-lost' : 'badge-found'}">${escHtml(item.type)}</span></td>
+          <td title="${escHtml(item.category)}">${escHtml(item.category)}</td>
+          <td title="${escHtml(item.location)}"><span class="admin-cell-truncate">${escHtml(item.location)}</span></td>
+          <td title="${escHtml(reporterValues.join(' · ') || '—')}">${reporterValues.length
+            ? reporterValues.map((value, index) => `<span class="admin-cell-truncate${index ? ' reporter-contact' : ''}">${escHtml(value)}</span>`).join('')
+            : '—'}</td>
+          <td title="${escHtml(date)}">${date}</td>
+          <td class="status-cell" title="${pendingClaim ? 'Pending Verification' : latestClaim?.status === 'rejected' && !item.claimed ? 'Rejected · Available' : escHtml(item.status)}">${itemStatus}</td>
+          <td class="actions-cell">
+            <div class="action-buttons">
+              ${pendingClaim ? `<button class="action-btn action-btn-claim" onclick="openClaimReview('${pendingClaim.id}')">Review Claim</button>` : ''}
+              ${canRestore ? `<button class="action-btn action-btn-restore" onclick="markRestore('${item.id}')">Restore</button>` : ''}
+              <button class="action-btn action-btn-delete" onclick="openDeleteModal('${item.id}','${escHtml(item.title)}')">Delete</button>
+            </div>
+          </td>
+        </tr>`;
+      }).join('');
+    }
+
+    function getFilteredAdminItems() {
+      let items = adminItems.slice();
+      const query = document.getElementById('adminSearch').value.toLowerCase().trim();
+      const type = document.getElementById('adminFilterType').value;
+      const status = document.getElementById('adminFilterStatus').value;
+
+      if (query) items = items.filter(item =>
+        (item.title || '').toLowerCase().includes(query) ||
+        (item.reporterName || '').toLowerCase().includes(query) ||
+        (item.reporterContact || '').toLowerCase().includes(query) ||
+        (item.reporterEmail || '').toLowerCase().includes(query) ||
+        (item.category || '').toLowerCase().includes(query) ||
+        (item.location || '').toLowerCase().includes(query) ||
+        (item.desc || '').toLowerCase().includes(query)
+      );
+      if (type) items = items.filter(item => item.type === type);
+      if (status) items = items.filter(item => item.status === status || (['lost', 'found'].includes(status) && item.type === status));
+      return items;
+    }
+
+    function renderItemsPagination(totalItems, totalPages, startIndex) {
+      const summary = document.getElementById('paginationSummary');
+      const controls = document.getElementById('paginationControls');
+      const firstItem = totalItems ? startIndex + 1 : 0;
+      const lastItem = totalItems ? Math.min(startIndex + adminItemsPerPage, totalItems) : 0;
+      summary.textContent = `Showing ${firstItem} to ${lastItem} of ${totalItems} entries`;
+
+      if (totalPages <= 1) {
+        controls.innerHTML = '';
+        return;
+      }
+
+      const pageButtons = Array.from({ length: totalPages }, (_, index) => {
+        const page = index + 1;
+        const active = page === adminCurrentPage;
+        return `<button type="button" class="pagination-button${active ? ' active' : ''}" onclick="changeAdminItemsPage(${page})" aria-label="Page ${page}"${active ? ' aria-current="page"' : ''}>${page}</button>`;
+      }).join('');
+
+      controls.innerHTML = `
+        <button type="button" class="pagination-button" onclick="changeAdminItemsPage(${adminCurrentPage - 1})" ${adminCurrentPage === 1 ? 'disabled' : ''}>Previous</button>
+        ${pageButtons}
+        <button type="button" class="pagination-button" onclick="changeAdminItemsPage(${adminCurrentPage + 1})" ${adminCurrentPage === totalPages ? 'disabled' : ''}>Next</button>`;
+    }
+
+    function changeAdminItemsPage(page) {
+      const totalPages = Math.max(1, Math.ceil(getFilteredAdminItems().length / adminItemsPerPage));
+      adminCurrentPage = Math.max(1, Math.min(Number(page) || 1, totalPages));
+      renderItemsTable();
+    }
+
+    async function renderClaimsTab() {
+      const mount = document.getElementById('claimsMount');
+      mount.innerHTML = '<div class="empty-state"><p>Loading claim requests...</p></div>';
+      try {
+        const response = await fetch('/api/items/claims', { cache: 'no-store' });
+        const data = await response.json();
+        if (!response.ok || !data.success) throw new Error(data.message || 'Unable to load claim requests.');
+        claimRequests = data.claims;
+        adminClaimsSignature = JSON.stringify(claimRequests);
+        renderItemsTable();
+        updateAdminNotificationBadge();
+        const claimsStat = document.querySelectorAll('#adminStats .stat-number')[5];
+        if (claimsStat) claimsStat.textContent = claimRequests.filter(claim => claim.status === 'pending').length;
+
+        if (claimRequests.length === 0) {
+          mount.innerHTML = '<div class="empty-state"><h3>No claim requests</h3><p>Submitted requests will appear here for moderator review.</p></div>';
+          return;
+        }
+
+        mount.innerHTML = claimRequests.map(claim => `
+          <div class="claim-card">
+            <div class="claim-card-header">
+              <div>
+                <h3>Claim for: ${escHtml(claim.itemTitle)}</h3>
+                <div class="claim-meta">Reference: ${escHtml(claim.itemRefCode)} · Submitted: ${formatDate(claim.createdAt)} (${timeAgo(claim.createdAt)})</div>
+              </div>
+              <span class="badge ${claim.status === 'pending' ? 'badge-lost' : claim.status === 'approved' ? 'badge-found' : 'badge-claimed'}" style="text-transform:capitalize;">${escHtml(claim.status)}</span>
+            </div>
+            ${claim.status === 'pending' ? `
+            <div style="display:flex;gap:.5rem;margin-top:.85rem;">
+              <button class="action-btn action-btn-claim" onclick="openClaimReview('${claim.id}')">Review Claim</button>
+            </div>` : ''}
+          </div>`).join('');
+      } catch (error) {
+        mount.innerHTML = `<div class="empty-state"><h3>Claims unavailable</h3><p>${escHtml(error.message)}</p></div>`;
+      }
+    }
+
+    async function updateItemClaimStatus(id, proof = '') {
+      try {
+        const response = await fetch(`/api/items/${encodeURIComponent(id)}/claim`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ proof })
+        });
+        const data = await response.json();
+        if (!response.ok || !data.success) throw new Error(data.message || 'Unable to update item status.');
+        await refreshAdminItems();
+        showToast(data.message);
+      } catch (error) {
+        showToast(error.message, 'error');
+      }
+    }
+
+    function markClaimed(id) {
+      updateItemClaimStatus(id, 'Verified by moderator during campus handoff.');
+    }
+
+    function markRestore(id) {
+      updateItemClaimStatus(id);
+    }
+
+    function openDeleteModal(id, title) {
+      deleteTargetId = id;
+      document.getElementById('deleteMsg').textContent =
+        `Are you sure you want to permanently delete "${title}"? This action cannot be undone.`;
+      document.getElementById('deleteModal').classList.add('open');
+    }
+    function closeDeleteModal() {
+      document.getElementById('deleteModal').classList.remove('open');
+      deleteTargetId = null;
+    }
+    async function doDelete() {
+      if (!deleteTargetId) return;
+
+      const id = deleteTargetId;
+      const button = document.getElementById('confirmDelete');
+      button.disabled = true;
+      try {
+        const response = await fetch(`/api/items/${encodeURIComponent(id)}`, {
+          method: 'DELETE',
+          credentials: 'same-origin'
+        });
+        const data = await response.json();
+        if (!response.ok && response.status !== 404) {
+          throw new Error(data.message || 'Unable to delete item. Please try again.');
+        }
+
+        closeDeleteModal();
+        await refreshAdminItems();
+        showToast('Item permanently deleted.');
+      } catch (error) {
+        showToast(error.message || 'Unable to delete item. Please try again.', 'error');
+      } finally {
+        button.disabled = false;
+      }
+    }
+
+    function openClaimReview(id) {
+      const claim = claimRequests.find(entry => entry.id === id);
+      const item = adminItems.find(entry => String(entry.id) === String(claim?.itemId));
+      if (!claim || !item) {
+        showToast('Claim or item details are unavailable. Refresh and try again.', 'error');
+        return;
+      }
+
+      activeClaimReviewId = id;
+      const approveButton = document.getElementById('claimApproveButton');
+      const rejectButton = document.getElementById('claimRejectButton');
+      approveButton.textContent = 'Approve Claim';
+      approveButton.onclick = () => prepareClaimDecision('approved');
+      approveButton.hidden = false;
+      rejectButton.textContent = 'Reject Claim';
+      rejectButton.onclick = () => prepareClaimDecision('rejected');
+      rejectButton.hidden = false;
+
+      document.getElementById('claimReviewTitle').textContent = `Verify Claim Request - ${item.id}`;
+      const proofImage = /^\/uploads\/[a-zA-Z0-9._-]+$/.test(claim.proof || '')
+        ? `<img src="${escHtml(claim.proof)}" alt="Claimant proof image" />`
+        : '';
+      document.getElementById('claimReviewContent').innerHTML = `
+        <div class="claim-review-grid">
+          <section class="claim-review-section">
+            <h3>Claimant Details</h3>
+            <p><strong>Student Name:</strong> ${escHtml(claim.claimantName || 'Not provided')}</p>
+            <p><strong>Student ID Number:</strong> ${escHtml(claim.claimantStudentId || 'Not provided')}</p>
+            <p><strong>Email:</strong> ${escHtml(claim.claimantEmail || 'Not provided')}</p>
+            <p><strong>Contact Number:</strong> ${escHtml(claim.claimantContact || 'Not provided')}</p>
+            <p><strong>Course &amp; Year:</strong> ${escHtml(claim.claimantCourseYear || 'Not provided')}</p>
+            <p><strong>Department:</strong> ${escHtml(claim.claimantDepartment || 'Not provided')}</p>
+          </section>
+          <section class="claim-review-section">
+            <h3>Public Item Details</h3>
+            <p><strong>Item:</strong> ${escHtml(item.title)}</p>
+            <p><strong>Type / Category:</strong> ${escHtml(item.type)} / ${escHtml(item.category)}</p>
+            <p><strong>Location:</strong> ${escHtml(item.location)}</p>
+            <p><strong>Description:</strong> ${escHtml(item.desc || item.description || 'No description provided.')}</p>
+            ${item.photo ? `<img src="${escHtml(item.photo)}" alt="Reported item" />` : ''}
+          </section>
+          <section class="claim-review-section">
+            <h3>Claimant's Proof / Secret Detail</h3>
+            <p>${escHtml(claim.proof || 'No proof detail provided.')}</p>${proofImage}
+          </section>
+          <section class="claim-review-section">
+            <h3>Secret Ownership Detail</h3>
+            <p>${escHtml(item.verification || 'No secret ownership detail was provided.')}</p>
+          </section>
+        </div>`;
+      document.getElementById('claimReviewDecisionFields').innerHTML = '';
+      document.getElementById('claimReviewModal').classList.add('open');
+    }
+
+    function closeClaimReview() {
+      document.getElementById('claimReviewModal').classList.remove('open');
+      activeClaimReviewId = null;
+    }
+
+    function prepareClaimDecision(status) {
+      const fields = document.getElementById('claimReviewDecisionFields');
+      const approveButton = document.getElementById('claimApproveButton');
+      const rejectButton = document.getElementById('claimRejectButton');
+      if (status === 'approved') {
+        fields.innerHTML = `
+          <label for="claimPickupInstructions">Optional pickup instructions</label>
+          <textarea class="claim-review-input" id="claimPickupInstructions" rows="2" maxlength="500" placeholder="Please present your CSPC Student ID at the SAS Office, Room 101"></textarea>`;
+        approveButton.textContent = 'Confirm Approval';
+        approveButton.onclick = () => submitClaimDecision('approved');
+        rejectButton.hidden = true;
+      } else {
+        fields.innerHTML = `
+          <label for="claimRejectionReason">Reason for rejection</label>
+          <textarea class="claim-review-input" id="claimRejectionReason" rows="2" maxlength="500" required placeholder="Proof provided does not match item details"></textarea>`;
+        rejectButton.textContent = 'Submit Rejection';
+        rejectButton.onclick = () => submitClaimDecision('rejected');
+        approveButton.hidden = true;
+      }
+    }
+
+    async function submitClaimDecision(status) {
+      const pickupInstructions = status === 'approved'
+        ? document.getElementById('claimPickupInstructions').value.trim()
+        : '';
+      const rejectionReason = status === 'rejected'
+        ? document.getElementById('claimRejectionReason').value.trim()
+        : '';
+      if (status === 'rejected' && rejectionReason.length < 5) {
+        showToast('Enter a rejection reason of at least 5 characters.', 'error');
+        return;
+      }
+
+      try {
+        const response = await fetch(`/api/items/claims/${encodeURIComponent(activeClaimReviewId)}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ status, pickupInstructions, rejectionReason })
+        });
+        const data = await response.json();
+        if (!response.ok || !data.success) throw new Error(data.message || 'Unable to review claim.');
+        closeClaimReview();
+        await renderClaimsTab();
+        await refreshAdminItems();
+        showToast(data.message);
+      } catch (error) {
+        showToast(error.message, 'error');
+      }
+    }
+
+    function exportCSV() {
+      const items = adminItems;
+      const headers = ['ID','Type','Title','Category','Location','Status','Reporter','Contact','Email','Date Lost/Found','Created At'];
+      const rows = items.map(i => [
+        i.id, i.type, i.title, i.category, i.location, i.status,
+        i.reporterName, i.reporterContact, i.reporterEmail || '',
+        i.dateLost || i.dateFound || '', i.createdAt
+      ].map(v => `"${String(v || '').replace(/"/g,'""')}"`).join(','));
+
+      const csv = [headers.join(','), ...rows].join('\n');
+      const blob = new Blob([csv], { type: 'text/csv' });
+      const url  = URL.createObjectURL(blob);
+      const a    = document.createElement('a');
+      a.href = url;
+      a.download = `cspc-lostfound-${new Date().toISOString().slice(0,10)}.csv`;
+      a.click();
+      URL.revokeObjectURL(url);
+      showToast('CSV exported successfully.');
+    }
