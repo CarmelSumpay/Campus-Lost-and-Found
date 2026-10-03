@@ -69,9 +69,29 @@
       white-space: normal;
       word-break: break-word;
       padding: 12px 10px;
+      text-align: center;
     }
-    #adminItemsTable .actions-cell { overflow: visible; text-overflow: clip; white-space: normal; }
-    #adminItemsTable .status-cell .badge { white-space: nowrap; word-break: normal; }
+    #adminItemsTable .status-cell { overflow: hidden; }
+    #adminItemsTable .status-cell .badge {
+      display: inline-block;
+      max-width: 100%;
+      white-space: normal;
+      word-break: normal;
+      line-height: 1.35;
+      text-align: center;
+    }
+    #adminItemsTable .actions-cell { overflow: hidden; }
+    #adminItemsTable .action-list {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: .4rem;
+    }
+    #adminItemsTable .action-list .action-btn {
+      max-width: 100%;
+      white-space: normal;
+      overflow-wrap: anywhere;
+    }
     .admin-pagination {
       display: flex;
       align-items: center;
@@ -293,7 +313,6 @@
       text-align: left;
       box-sizing: border-box;
     }
-    #adminItemsTable { min-width: 0; }
     #adminPanel .page-header h1 {
       font-size: 2.2rem;
       font-weight: 800;
@@ -425,14 +444,14 @@
           <table id="adminItemsTable">
             <colgroup>
               <col style="width:5%" />
-              <col style="width:14%" />
-              <col style="width:8%" />
-              <col style="width:11%" />
-              <col style="width:18%" />
+              <col style="width:13%" />
+              <col style="width:7%" />
+              <col style="width:10%" />
               <col style="width:16%" />
+              <col style="width:15%" />
               <col style="width:9%" />
-              <col style="width:8%" />
-              <col style="width:11%" />
+              <col style="width:13%" />
+              <col style="width:12%" />
             </colgroup>
             <thead>
               <tr>
@@ -748,7 +767,7 @@
           <td title="${escHtml(date)}">${date}</td>
           <td class="status-cell" title="${pendingClaim ? 'Pending Verification' : latestClaim?.status === 'rejected' && !item.claimed ? 'Rejected · Available' : escHtml(item.status)}">${itemStatus}</td>
           <td class="actions-cell">
-            <div style="display:flex;gap:.35rem;flex-wrap:wrap;">
+            <div class="action-list">
               ${pendingClaim ? `<button class="action-btn action-btn-claim" onclick="openClaimReview('${pendingClaim.id}')">Review Claim</button>` : ''}
               ${canRestore ? `<button class="action-btn action-btn-restore" onclick="markRestore('${item.id}')">Restore</button>` : ''}
               <button class="action-btn action-btn-delete" onclick="openDeleteModal('${item.id}','${escHtml(item.title)}')">Delete</button>
@@ -1035,5 +1054,6 @@
       showToast('CSV exported successfully.');
     }
   </script>
+  <script src="icons.js"></script>
 </body>
 </html>

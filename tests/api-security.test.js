@@ -117,6 +117,28 @@ test.before(async () => {
       reportedBy: 'reporter-test',
       status: 'active',
       claimed: false
+    },
+    {
+      id: 16,
+      refCode: 'CSPC-LF-2026-016',
+      title: 'Claimed found jacket',
+      category: 'Clothing',
+      type: 'found',
+      location: 'Cafeteria',
+      desc: 'A jacket already returned to its owner.',
+      status: 'active',
+      claimed: true
+    },
+    {
+      id: 15,
+      refCode: 'CSPC-LF-2026-015',
+      title: 'Claimed lost wallet',
+      category: 'Others',
+      type: 'lost',
+      location: 'Cafeteria',
+      desc: 'A wallet that has been returned to its owner.',
+      status: 'claimed',
+      claimed: false
     }
   ]));
 
@@ -143,10 +165,25 @@ test('public item responses exclude private fields', async () => {
   const response = await fetch(`${baseUrl}/api/items`);
   assert.equal(response.status, 200);
   const { items } = await response.json();
-  assert.equal(items.length, 3);
+  assert.equal(items.length, 5);
   for (const field of ['contact', 'verification', 'claimantProof', 'reportedBy', 'notifications', 'ownerEmail']) {
     assert.equal(Object.hasOwn(items[0], field), false, `public response should omit ${field}`);
   }
+});
+
+test('claimed items are excluded from lost and found results and included in claimed results', async () => {
+  const lostResponse = await fetch(`${baseUrl}/api/items?type=lost`);
+  assert.equal(lostResponse.status, 200);
+  assert.deepEqual((await lostResponse.json()).items, []);
+
+  const foundResponse = await fetch(`${baseUrl}/api/items?type=found`);
+  assert.equal(foundResponse.status, 200);
+  assert.deepEqual((await foundResponse.json()).items.map(item => item.id), [11, 13, 14]);
+
+  const claimedResponse = await fetch(`${baseUrl}/api/items?status=claimed`);
+  assert.equal(claimedResponse.status, 200);
+  const claimedItems = (await claimedResponse.json()).items;
+  assert.deepEqual(claimedItems.map(item => item.id).sort((a, b) => a - b), [15, 16]);
 });
 
 test('registered belongings are private except through QR reference lookup', async () => {

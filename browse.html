@@ -291,7 +291,11 @@
       let items = getItems();
 
       // Type filter
-      if (activeType !== 'all') items = items.filter(i => i.type === activeType);
+      if (activeType !== 'all') {
+        items = items.filter(i =>
+          i.type === activeType && !(i.claimed || i.status === 'claimed')
+        );
+      }
 
       // Search
       const q = document.getElementById('searchInput').value.toLowerCase().trim();
@@ -366,5 +370,6 @@
       document.getElementById('browseGrid').scrollIntoView({ behavior: 'smooth', block: 'start' });
     }
   </script>
+  <script src="icons.js"></script>
 </body>
 </html>

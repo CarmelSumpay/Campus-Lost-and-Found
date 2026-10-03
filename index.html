@@ -597,10 +597,10 @@
       <div class="nav-links" id="navLinks">
         <a href="#items">Items</a>
         <a href="#report">Report Item</a>
-        <button type="button" class="btn btn-outline nav-btn-action nav-register-btn nav-register-mobile" onclick="handleOpenRegisterBelonging()">🏷️ Register Belonging</button>
+        <button type="button" class="btn btn-outline nav-btn-action nav-register-btn nav-register-mobile" onclick="handleOpenRegisterBelonging()">Register Belonging</button>
       </div>
       <div class="nav-actions">
-        <button type="button" class="btn btn-outline nav-btn-action nav-register-btn" onclick="handleOpenRegisterBelonging()">🏷️ Register Belonging</button>
+        <button type="button" class="btn btn-outline nav-btn-action nav-register-btn" onclick="handleOpenRegisterBelonging()">Register Belonging</button>
         <button type="button" class="theme-toggle" id="themeToggleBtn" onclick="toggleTheme()" title="Toggle Theme" aria-label="Toggle theme">
           <span class="theme-toggle-icon">🌙</span>
         </button>
@@ -821,7 +821,12 @@
         <div class="input-field" style="margin-bottom: 1rem;">
           <label for="itemPhotoInput">Upload Photo (Optional)</label>
           <div class="photo-upload-area" role="button" tabindex="0" onclick="document.getElementById('itemPhotoInput').click()" onkeydown="if(event.key === 'Enter' || event.key === ' ') { event.preventDefault(); document.getElementById('itemPhotoInput').click(); }" ondragover="event.preventDefault(); this.classList.add('dragover')" ondragleave="this.classList.remove('dragover')" ondrop="handlePhotoDrop(event)">
-            <div class="photo-upload-icon" aria-hidden="true"><span>☁</span><strong>↑</strong></div>
+            <div class="photo-upload-icon" aria-hidden="true">
+              <svg viewBox="0 0 40 32" focusable="false">
+                <path d="M11 27h19a9 9 0 0 0 1-18A13 13 0 0 0 7 12a8 8 0 0 0 4 15z" fill="currentColor"/>
+                <path d="M20 23V11m-5 5 5-5 5 5" fill="none" stroke="#fff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+            </div>
             <strong>Click or drag and drop image here</strong>
             <small>PNG, JPG, or WEBP up to 5MB</small>
           </div>
@@ -987,7 +992,7 @@
 
       <div style="display: flex; gap: 0.75rem; justify-content: center; flex-wrap: wrap;">
         <button type="button" class="btn btn-outline" onclick="closeReportSuccessModal()">Close</button>
-        <button type="button" class="btn btn-primary" id="successPrintBtn" onclick="openQrFromSuccessModal()">🏷️ Get QR Sticker</button>
+        <button type="button" class="btn btn-primary" id="successPrintBtn" onclick="openQrFromSuccessModal()">Get QR Sticker</button>
       </div>
     </div>
   </div>
@@ -1045,7 +1050,7 @@
 
         <div style="display: flex; gap: 0.75rem; justify-content: flex-end;">
           <button type="button" class="btn btn-outline" onclick="closeRegisterBelongingModal()">Cancel</button>
-          <button type="submit" class="btn btn-primary" id="regSubmitBtn">✨ Register &amp; Generate QR Sticker</button>
+          <button type="submit" class="btn btn-primary" id="regSubmitBtn">Register &amp; Generate QR Sticker</button>
         </div>
       </form>
     </div>
@@ -1057,18 +1062,31 @@
         <div><span class="category-picker-eyebrow">Item classification</span><h2 id="categoryPickerTitle">Select a Category</h2></div>
         <button type="button" class="category-picker-close" onclick="closeCategoryPicker()" aria-label="Close category picker">&times;</button>
       </div>
+      <svg class="category-icon-defs" aria-hidden="true" focusable="false">
+        <symbol id="category-icon-electronics" viewBox="0 0 24 24"><rect x="6" y="2.5" width="12" height="19" rx="2"/><path d="M10 5h4M11 18.5h2"/></symbol>
+        <symbol id="category-icon-bottle" viewBox="0 0 24 24"><path d="M9 3h6v3l2 2v12a2 2 0 0 1-2 2H9a2 2 0 0 1-2-2V8l2-2z"/><path d="M9 10h8M9 14h8"/></symbol>
+        <symbol id="category-icon-clothing" viewBox="0 0 24 24"><path d="m8 4 4 2 4-2 5 3-3 5-2-1v10H8V11l-2 1-3-5z"/><path d="M9 4a3 3 0 0 0 6 0"/></symbol>
+        <symbol id="category-icon-books" viewBox="0 0 24 24"><path d="M4 4.5A2.5 2.5 0 0 1 6.5 2H20v17H6.5A2.5 2.5 0 0 0 4 21.5z"/><path d="M4 5v16.5M8 6h8M8 10h8"/></symbol>
+        <symbol id="category-icon-bag" viewBox="0 0 24 24"><rect x="4" y="7" width="16" height="14" rx="2"/><path d="M9 7V5a3 3 0 0 1 6 0v2M4 12h16M10 12v2h4v-2"/></symbol>
+        <symbol id="category-icon-key" viewBox="0 0 24 24"><circle cx="8" cy="10" r="5"/><path d="m12 13 8 8m-3-3 2-2m-5-1 2-2"/></symbol>
+        <symbol id="category-icon-jewelry" viewBox="0 0 24 24"><path d="m3 9 4-5h10l4 5-9 12zM3 9h18M7 4l5 17 5-17M7 9l5-5 5 5"/></symbol>
+        <symbol id="category-icon-sports" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="m12 7 4 3-1.5 5h-5L8 10zM8 10l-4-1m4 1-2 6m8-6 5-1m-3 6 3 4m-11-3 4 5"/></symbol>
+        <symbol id="category-icon-school" viewBox="0 0 24 24"><path d="m4 17 11-11 4 4L8 21H4zM13 8l4 4M4 17l4 4M17 3l4 4"/></symbol>
+        <symbol id="category-icon-id" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="10" r="2.5"/><path d="M5.5 17a3.5 3.5 0 0 1 7 0m3-8h3m-3 4h3"/></symbol>
+        <symbol id="category-icon-other" viewBox="0 0 24 24"><path d="m3 7 9-4 9 4-9 4zM3 7v10l9 4 9-4V7M12 11v10"/></symbol>
+      </svg>
       <div class="category-grid">
-        <button type="button" class="category-option" onclick="selectCategory('Electronics', '📱')"><span>📱</span>Electronics</button>
-        <button type="button" class="category-option" onclick="selectCategory('Water Bottles/Tumblers', '🥤')"><span>🥤</span>Water Bottles / Tumblers</button>
-        <button type="button" class="category-option" onclick="selectCategory('Clothing & Accessories', '👕')"><span>👕</span>Clothing &amp; Accessories</button>
-        <button type="button" class="category-option" onclick="selectCategory('Books & Documents', '📚')"><span>📚</span>Books &amp; Documents</button>
-        <button type="button" class="category-option" onclick="selectCategory('Bags & Wallets', '🎒')"><span>🎒</span>Bags &amp; Wallets</button>
-        <button type="button" class="category-option" onclick="selectCategory('Keys', '🔑')"><span>🔑</span>Keys</button>
-        <button type="button" class="category-option" onclick="selectCategory('Jewelry', '💍')"><span>💍</span>Jewelry</button>
-        <button type="button" class="category-option" onclick="selectCategory('Sports Equipment', '⚽')"><span>⚽</span>Sports Equipment</button>
-        <button type="button" class="category-option" onclick="selectCategory('School Supplies', '✏️')"><span>✏️</span>School Supplies</button>
-        <button type="button" class="category-option" onclick="selectCategory('ID / Cards', '🪪')"><span>🪪</span>ID / Cards</button>
-        <button type="button" class="category-option" onclick="selectCategory('Others', '📦')"><span>📦</span>Others</button>
+        <button type="button" class="category-option" onclick="selectCategory('Electronics', 'electronics')"><svg aria-hidden="true"><use href="#category-icon-electronics"></use></svg>Electronics</button>
+        <button type="button" class="category-option" onclick="selectCategory('Water Bottles/Tumblers', 'bottle')"><svg aria-hidden="true"><use href="#category-icon-bottle"></use></svg>Water Bottles / Tumblers</button>
+        <button type="button" class="category-option" onclick="selectCategory('Clothing & Accessories', 'clothing')"><svg aria-hidden="true"><use href="#category-icon-clothing"></use></svg>Clothing &amp; Accessories</button>
+        <button type="button" class="category-option" onclick="selectCategory('Books & Documents', 'books')"><svg aria-hidden="true"><use href="#category-icon-books"></use></svg>Books &amp; Documents</button>
+        <button type="button" class="category-option" onclick="selectCategory('Bags & Wallets', 'bag')"><svg aria-hidden="true"><use href="#category-icon-bag"></use></svg>Bags &amp; Wallets</button>
+        <button type="button" class="category-option" onclick="selectCategory('Keys', 'key')"><svg aria-hidden="true"><use href="#category-icon-key"></use></svg>Keys</button>
+        <button type="button" class="category-option" onclick="selectCategory('Jewelry', 'jewelry')"><svg aria-hidden="true"><use href="#category-icon-jewelry"></use></svg>Jewelry</button>
+        <button type="button" class="category-option" onclick="selectCategory('Sports Equipment', 'sports')"><svg aria-hidden="true"><use href="#category-icon-sports"></use></svg>Sports Equipment</button>
+        <button type="button" class="category-option" onclick="selectCategory('School Supplies', 'school')"><svg aria-hidden="true"><use href="#category-icon-school"></use></svg>School Supplies</button>
+        <button type="button" class="category-option" onclick="selectCategory('ID / Cards', 'id')"><svg aria-hidden="true"><use href="#category-icon-id"></use></svg>ID / Cards</button>
+        <button type="button" class="category-option" onclick="selectCategory('Others', 'other')"><svg aria-hidden="true"><use href="#category-icon-other"></use></svg>Others</button>
       </div>
     </div>
   </div>
@@ -1427,11 +1445,12 @@
 
       // Filter by type
       let filtered = items.filter(item => {
+        const isClaimed = item.claimed || item.status === 'claimed';
         if (currentFilter === 'registered') return item.type === 'registered';
         if (item.type === 'registered') return false; // Hide registered belongings from public tabs
-        if (currentFilter === 'lost') return item.type === 'lost' && !item.claimed;
-        if (currentFilter === 'found') return item.type === 'found' && !item.claimed;
-        if (currentFilter === 'claimed') return item.claimed;
+        if (currentFilter === 'lost') return item.type === 'lost' && !isClaimed;
+        if (currentFilter === 'found') return item.type === 'found' && !isClaimed;
+        if (currentFilter === 'claimed') return isClaimed;
         return true;
       });
 
@@ -1493,7 +1512,7 @@
               </div>
 
               <div class="card-actions" style="margin-top: 1rem;">
-                <button class="btn-sm btn-qr" onclick="openQrStickerModal(${item.id})">🏷️ QR Sticker</button>
+                <button class="btn-sm btn-qr" onclick="openQrStickerModal(${item.id})">QR Sticker</button>
                 <button class="btn-sm btn-outline" style="border-color: rgba(34,197,94,0.4); color: #86efac;" onclick="openAnonymousFinderModal('${escapeHtml(item.refCode)}')">📱 Test Finder Screen</button>
                 <button class="btn-sm btn-del" onclick="deleteItem(${item.id})">Unregister</button>
               </div>
@@ -1566,7 +1585,7 @@
 
             <div class="card-actions">
               <button class="btn-sm btn-claim" onclick="toggleClaim(${item.id})">${claimBtnText}</button>
-              <button class="btn-sm btn-qr" onclick="openQrStickerModal(${item.id})">🏷️ QR Sticker</button>
+              <button class="btn-sm btn-qr" onclick="openQrStickerModal(${item.id})">QR Sticker</button>
               <button class="btn-sm btn-del" onclick="deleteItem(${item.id})">Remove</button>
             </div>
           </div>
@@ -1667,7 +1686,7 @@
       if (!activeCategoryField) return;
       document.getElementById(activeCategoryField).value = value;
       const picker = document.getElementById(`${activeCategoryField}Picker`);
-      picker.innerHTML = `<span class="category-picker-selected-icon">${icon}</span>${value}`;
+      picker.innerHTML = `<svg class="category-picker-selected-icon" aria-hidden="true"><use href="#category-icon-${icon}"></use></svg>${value}`;
       picker.classList.add('selected');
       closeCategoryPicker();
     }
@@ -2223,5 +2242,6 @@
       }
     });
   </script>
+  <script src="icons.js"></script>
 </body>
 </html>

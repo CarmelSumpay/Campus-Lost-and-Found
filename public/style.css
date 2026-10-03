@@ -1436,7 +1436,16 @@ select::placeholder,
 .category-picker:hover,
 .category-picker:focus-visible,
 .category-picker.selected { border-color: var(--blue-main); color: var(--text-main); outline: none; }
-.category-picker-selected-icon { font-size: 1.1rem; }
+.category-picker-selected-icon {
+  width: 1.2rem;
+  height: 1.2rem;
+  flex: 0 0 auto;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
 
 .category-picker-modal {
   width: min(92%, 560px);
@@ -1454,8 +1463,9 @@ select::placeholder,
 .category-picker-header h2 { margin: 0.25rem 0 0; color: var(--text-main); }
 .category-picker-close { border: 0; background: transparent; color: var(--text-muted); font-size: 1.5rem; cursor: pointer; }
 .category-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.65rem; }
+.category-icon-defs { position: absolute; width: 0; height: 0; overflow: hidden; }
 .category-option { min-height: 4.2rem; padding: 0.7rem; display: flex; align-items: center; gap: 0.65rem; border: 1px solid var(--border); border-radius: 9px; background: rgba(59, 130, 246, 0.04); color: var(--text-main); font: inherit; font-size: 0.82rem; font-weight: 700; text-align: left; cursor: pointer; }
-.category-option span { font-size: 1.45rem; }
+.category-option svg { width: 1.35rem; height: 1.35rem; flex: 0 0 auto; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; color: var(--blue-light); }
 .category-option:hover, .category-option:focus-visible { border-color: var(--blue-main); background: rgba(59, 130, 246, 0.12); outline: none; }
 @media (max-width: 480px) { .category-grid { grid-template-columns: 1fr; } }
 
@@ -1524,19 +1534,12 @@ select::placeholder,
 }
 
 .photo-upload-icon {
-  position: relative;
   height: 2.8rem;
   color: #fbbf24;
-  font-size: 3rem;
-  line-height: 2.2rem;
 }
 
-.photo-upload-icon strong {
-  position: absolute;
-  left: 50%;
-  top: 0.15rem;
-  transform: translateX(-50%);
-  color: #ffffff;
-  font-size: 1.35rem;
-  line-height: 1;
+.photo-upload-icon svg {
+  display: block;
+  width: 3.5rem;
+  height: 2.8rem;
 }

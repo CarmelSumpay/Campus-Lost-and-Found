@@ -82,6 +82,10 @@ function saveItems(items) {
   fs.writeFileSync(ITEMS_FILE, JSON.stringify(items, null, 2), 'utf8');
 }
 
+function isItemClaimed(item) {
+  return Boolean(item.claimed || item.status === 'claimed');
+}
+
 function getClaims() {
   try {
     return JSON.parse(fs.readFileSync(CLAIMS_FILE, 'utf8'));
@@ -308,14 +312,14 @@ router.get('/', (req, res) => {
 
   // Type filter: lost | found
   if (type && ['lost', 'found'].includes(type)) {
-    items = items.filter(i => i.type === type && !i.claimed);
+    items = items.filter(i => i.type === type && !isItemClaimed(i));
   }
 
   // Status filter: claimed | active
   if (status === 'claimed') {
-    items = items.filter(i => i.claimed);
+    items = items.filter(isItemClaimed);
   } else if (status === 'active') {
-    items = items.filter(i => !i.claimed);
+    items = items.filter(i => !isItemClaimed(i));
   }
 
   // Category filter

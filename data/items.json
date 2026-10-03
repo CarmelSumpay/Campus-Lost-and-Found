@@ -12,10 +12,12 @@
     "verification": "",
     "photo": "",
     "date": "Oct 2, 2026",
-    "status": "active",
-    "claimed": false,
+    "status": "claimed",
+    "claimed": true,
     "reportedBy": "usr-1789797986739",
-    "createdAt": "2026-10-02T13:26:51.879Z"
+    "createdAt": "2026-10-02T13:26:51.879Z",
+    "claimedAt": "2026-10-03T08:09:31.004Z",
+    "claimantProof": "name, birthday, color pink"
   },
   {
     "id": 1790947560127,

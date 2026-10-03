@@ -8,7 +8,17 @@
     "claimantName": "Carmel Sumpay",
     "claimantEmail": "casumpay@my.cspc.edu.ph",
     "proof": "name, birthday, color pink",
-    "status": "pending",
-    "createdAt": "2026-10-03T07:46:43.761Z"
+    "status": "approved",
+    "createdAt": "2026-10-03T07:46:43.761Z",
+    "reviewedAt": "2026-10-03T08:09:31.004Z",
+    "reviewedBy": "usr-admin-01",
+    "pickupInstructions": "",
+    "rejectionReason": "",
+    "notification": {
+      "id": "claim-notif-02f3e46e-51fe-4e69-a55b-b5d25fa1988c",
+      "timestamp": "2026-10-03T08:09:31.004Z",
+      "read": false,
+      "message": "Your claim for Ballpen was approved."
+    }
   }
 ]

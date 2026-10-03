@@ -1410,7 +1410,16 @@ select::placeholder,
   outline: none;
 }
 
-.category-picker-selected-icon { font-size: 1.1rem; }
+.category-picker-selected-icon {
+  width: 1.2rem;
+  height: 1.2rem;
+  flex: 0 0 auto;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
 
 .category-picker-modal {
   width: min(92%, 560px);
@@ -1455,6 +1464,8 @@ select::placeholder,
   gap: 0.65rem;
 }
 
+.category-icon-defs { position: absolute; width: 0; height: 0; overflow: hidden; }
+
 .category-option {
   min-height: 4.2rem;
   padding: 0.7rem;
@@ -1472,7 +1483,17 @@ select::placeholder,
   cursor: pointer;
 }
 
-.category-option span { font-size: 1.45rem; }
+.category-option svg {
+  width: 1.35rem;
+  height: 1.35rem;
+  flex: 0 0 auto;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  color: var(--blue-light);
+}
 .category-option:hover,
 .category-option:focus-visible { border-color: var(--blue-main); background: rgba(59, 130, 246, 0.12); outline: none; }
 
@@ -1545,19 +1566,12 @@ select::placeholder,
 }
 
 .photo-upload-icon {
-  position: relative;
   height: 2.8rem;
   color: #fbbf24;
-  font-size: 3rem;
-  line-height: 2.2rem;
 }
 
-.photo-upload-icon strong {
-  position: absolute;
-  left: 50%;
-  top: 0.15rem;
-  transform: translateX(-50%);
-  color: #ffffff;
-  font-size: 1.35rem;
-  line-height: 1;
+.photo-upload-icon svg {
+  display: block;
+  width: 3.5rem;
+  height: 2.8rem;
 }
