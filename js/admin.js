@@ -127,8 +127,6 @@ let deleteTargetId = null;
         adminClaimsSignature = nextSignature;
         claimRequests = data.claims;
         renderItemsTable();
-        const claimsStat = document.querySelectorAll('#adminStats .stat-number')[5];
-        if (claimsStat) claimsStat.textContent = claimRequests.filter(claim => claim.status === 'pending').length;
       } catch (error) {
         // Keep the last claim snapshot when the API is temporarily unavailable.
       }
@@ -140,15 +138,13 @@ let deleteTargetId = null;
       const found   = items.filter(i => i.type==='found').length;
       const claimed = items.filter(i => i.status==='claimed').length;
       const pending = items.filter(i => i.status !== 'claimed').length;
-      const claims  = claimRequests.filter(claim => claim.status === 'pending').length;
-
       document.getElementById('adminStats').innerHTML = `
         <div class="stat-card"><div class="stat-number">${items.length}</div><div class="stat-label">Total Items</div></div>
         <div class="stat-card"><div class="stat-number">${lost}</div><div class="stat-label">Lost</div></div>
         <div class="stat-card"><div class="stat-number">${found}</div><div class="stat-label">Found</div></div>
         <div class="stat-card"><div class="stat-number">${claimed}</div><div class="stat-label">Claimed</div></div>
         <div class="stat-card"><div class="stat-number">${pending}</div><div class="stat-label">Pending</div></div>
-        <div class="stat-card"><div class="stat-number">${claims}</div><div class="stat-label">Claims</div></div>
+        <div class="stat-card"><div class="stat-number">0</div><div class="stat-label">Claims</div></div>
       `;
 
       renderItemsTable();
