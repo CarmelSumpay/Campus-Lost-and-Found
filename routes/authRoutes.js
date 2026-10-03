@@ -39,10 +39,27 @@ function saveUsers(users) {
   writeJsonArray(USERS_FILE, users);
 }
 
-function removeBootstrapAdminAccount() {
+function ensureDefaultAdminAccount() {
   const users = getUsers();
-  const remainingUsers = users.filter(user => user.id !== 'usr-admin-01');
-  if (remainingUsers.length !== users.length) saveUsers(remainingUsers);
+  const existingAdmin = users.find(user => user.email.toLowerCase() === 'admin@cspc.edu.ph');
+  if (existingAdmin) {
+    if (existingAdmin.role !== 'admin') {
+      throw new Error('admin@cspc.edu.ph is reserved for the administrator account.');
+    }
+    return;
+  }
+
+  users.push({
+    id: 'usr-admin-default',
+    email: 'admin@cspc.edu.ph',
+    passwordHash: bcrypt.hashSync('admin123', 10),
+    fullName: 'CSPC Administrator',
+    studentId: 'N/A',
+    role: 'admin',
+    department: 'Administration',
+    createdAt: new Date().toISOString()
+  });
+  saveUsers(users);
 }
 
 // POST /api/auth/register
@@ -200,6 +217,6 @@ router.get('/me', (req, res) => {
   });
 });
 
-router.removeBootstrapAdminAccount = removeBootstrapAdminAccount;
+router.ensureDefaultAdminAccount = ensureDefaultAdminAccount;
 
 module.exports = router;

@@ -171,6 +171,19 @@ test.after(async () => {
 });
 
 test('registration succeeds and reports when confirmation email SMTP is not configured', async () => {
+  const adminRegistrationResponse = await fetch(`${baseUrl}/api/auth/register`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      fullName: 'Impostor',
+      studentId: '1010012',
+      department: 'College of Computer Studies (CCS)',
+      email: 'admin@cspc.edu.ph',
+      password: 'StrongPassword1!'
+    })
+  });
+  assert.equal(adminRegistrationResponse.status, 400);
+
   const missingDepartmentResponse = await fetch(`${baseUrl}/api/auth/register`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -508,7 +521,20 @@ test('production server starts when loaded as a hosting entry module', async () 
     const response = await fetch(`http://127.0.0.1:${port}/api/items`);
     assert.equal(response.status, 200);
     const users = JSON.parse(fs.readFileSync(path.join(bootDataDir, 'users.json'), 'utf8'));
-    assert.deepEqual(users.map(user => user.id), ['kept-user']);
+    assert.deepEqual(users.map(user => user.id), ['usr-admin-01', 'kept-user', 'usr-admin-default']);
+
+    const loginResponse = await fetch(`http://127.0.0.1:${port}/api/auth/login`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-Forwarded-Proto': 'https' },
+      body: JSON.stringify({ email: 'admin@cspc.edu.ph', password: 'admin123' })
+    });
+    assert.equal(loginResponse.status, 200);
+    assert.equal((await loginResponse.json()).user.role, 'admin');
+    const sessionCookie = loginResponse.headers.get('set-cookie').split(';')[0];
+    const claimsResponse = await fetch(`http://127.0.0.1:${port}/api/items/claims`, {
+      headers: { Cookie: sessionCookie }
+    });
+    assert.equal(claimsResponse.status, 200);
   } finally {
     if (child.exitCode === null) {
       child.kill();

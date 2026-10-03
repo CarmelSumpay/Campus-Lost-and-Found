@@ -86,7 +86,7 @@ function createApp() {
 
 if (process.env.NODE_ENV !== 'test') {
   const PORT = process.env.PORT || 3000;
-  authRoutes.removeBootstrapAdminAccount();
+  authRoutes.ensureDefaultAdminAccount();
   createApp().listen(PORT, '0.0.0.0', () => console.log(`Server running at: http://localhost:${PORT}`));
 }
 
