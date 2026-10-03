@@ -212,8 +212,8 @@ function renderNav(activePage = '') {
     <div class="navbar-container">
       <a href="index.html" class="nav-logo">
         <img src="cspc-logo.png" alt="CSPC Logo" />
-        <span class="nav-logo-full">CSPC Lost &amp; Found</span>
-        <span class="nav-logo-short">CSPC L&amp;F</span>
+        <span class="nav-logo-full">Back2You</span>
+        <span class="nav-logo-short">Back2You</span>
       </a>
       <div class="nav-links" id="navLinks">
         ${links}
