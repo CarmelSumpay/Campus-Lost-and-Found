@@ -10,8 +10,29 @@ let deleteTargetId = null;
     const adminItemsPerPage = 10;
     let adminCurrentPage = 1;
 
-    document.addEventListener('DOMContentLoaded', () => {
+    async function adminFetch(url, options = {}) {
+      const response = await fetch(url, { ...options, credentials: 'same-origin' });
+      if (response.status === 401 || response.status === 403) {
+        window.location.replace('/login?redirect=%2Fadmin.html');
+      }
+      return response;
+    }
+
+    async function requireAdminSession() {
+      try {
+        const response = await adminFetch('/api/auth/me', { cache: 'no-store' });
+        const data = await response.json();
+        if (response.ok && data.authenticated && data.user?.role === 'admin') return true;
+      } catch (error) {
+        // Treat an unavailable auth session as unauthenticated.
+      }
+      window.location.replace('/login?redirect=%2Fadmin.html');
+      return false;
+    }
+
+    document.addEventListener('DOMContentLoaded', async () => {
       initNav();
+      if (!await requireAdminSession()) return;
       refreshAdminItems();
       renderClaimsTab();
       window.setInterval(() => {
@@ -78,7 +99,7 @@ let deleteTargetId = null;
       adminRefreshInProgress = true;
       try {
         try {
-          const response = await fetch('/api/items', { cache: 'no-store' });
+          const response = await adminFetch('/api/items', { cache: 'no-store' });
           if (response.ok) {
             const data = await response.json();
             if (data.success && Array.isArray(data.items)) {
@@ -104,7 +125,7 @@ let deleteTargetId = null;
 
     async function refreshAdminClaims() {
       try {
-        const response = await fetch('/api/items/claims', { cache: 'no-store' });
+        const response = await adminFetch('/api/items/claims', { cache: 'no-store' });
         const data = await response.json();
         if (!response.ok || !data.success) return;
         const nextSignature = JSON.stringify(data.claims);
@@ -175,9 +196,8 @@ let deleteTargetId = null;
       const button = document.getElementById('confirmAdminLogoutBtn');
       button.disabled = true;
       try {
-        const response = await fetch('/api/auth/logout', {
+        const response = await adminFetch('/api/auth/logout', {
           method: 'POST',
-          credentials: 'same-origin'
         });
         if (!response.ok) throw new Error('Logout request failed.');
         window.location.href = '/login';
@@ -304,7 +324,7 @@ let deleteTargetId = null;
       const mount = document.getElementById('claimsMount');
       mount.innerHTML = '<div class="empty-state"><p>Loading claim requests...</p></div>';
       try {
-        const response = await fetch('/api/items/claims', { cache: 'no-store' });
+        const response = await adminFetch('/api/items/claims', { cache: 'no-store' });
         const data = await response.json();
         if (!response.ok || !data.success) throw new Error(data.message || 'Unable to load claim requests.');
         claimRequests = data.claims;
@@ -340,7 +360,7 @@ let deleteTargetId = null;
 
     async function updateItemClaimStatus(id, proof = '') {
       try {
-        const response = await fetch(`/api/items/${encodeURIComponent(id)}/claim`, {
+        const response = await adminFetch(`/api/items/${encodeURIComponent(id)}/claim`, {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ proof })
@@ -379,9 +399,8 @@ let deleteTargetId = null;
       const button = document.getElementById('confirmDelete');
       button.disabled = true;
       try {
-        const response = await fetch(`/api/items/${encodeURIComponent(id)}`, {
+        const response = await adminFetch(`/api/items/${encodeURIComponent(id)}`, {
           method: 'DELETE',
-          credentials: 'same-origin'
         });
         const data = await response.json();
         if (!response.ok && response.status !== 404) {
@@ -491,7 +510,7 @@ let deleteTargetId = null;
       }
 
       try {
-        const response = await fetch(`/api/items/claims/${encodeURIComponent(activeClaimReviewId)}`, {
+        const response = await adminFetch(`/api/items/claims/${encodeURIComponent(activeClaimReviewId)}`, {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ status, pickupInstructions, rejectionReason })

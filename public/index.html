@@ -386,12 +386,14 @@
 
       <div class="input-field" id="claimProofGroup" style="margin-bottom: 1.25rem;">
         <label for="claimProofInput">Claimant Proof / Verification Answer</label>
-        <input type="text" id="claimProofInput" maxlength="500" placeholder="Enter proof, ID details, or verification answer..." style="width: 100%; background: rgba(255,255,255,0.05); border: 1.5px solid rgba(59,130,246,0.25); border-radius: 8px; padding: 0.6rem; color: var(--text-main);" />
+        <input type="text" id="claimProofInput" maxlength="500" aria-invalid="false" aria-describedby="claimProofError" placeholder="Enter proof, ID details, or verification answer..." style="width: 100%; background: rgba(255,255,255,0.05); border: 1.5px solid rgba(59,130,246,0.25); border-radius: 8px; padding: 0.6rem; color: var(--text-main);" />
+        <p id="claimProofError" style="display:none;color:#f87171;font-size:.76rem;margin-top:.35rem;" role="alert"></p>
       </div>
       <div id="claimantDetailsGroup" style="display:none;margin-bottom:1.25rem;">
         <div class="input-field" style="margin-bottom:.75rem;">
           <label for="claimantCourseYearInput">Course &amp; Year</label>
-          <input type="text" id="claimantCourseYearInput" maxlength="100" placeholder="e.g., BS Information Technology, 3rd Year" style="width: 100%; background: rgba(255,255,255,0.05); border: 1.5px solid rgba(59,130,246,0.25); border-radius: 8px; padding: 0.6rem; color: var(--text-main);" />
+          <input type="text" id="claimantCourseYearInput" maxlength="100" aria-invalid="false" aria-describedby="claimCourseYearError" placeholder="e.g., BS Information Technology, 3rd Year" style="width: 100%; background: rgba(255,255,255,0.05); border: 1.5px solid rgba(59,130,246,0.25); border-radius: 8px; padding: 0.6rem; color: var(--text-main);" />
+          <p id="claimCourseYearError" style="display:none;color:#f87171;font-size:.76rem;margin-top:.35rem;" role="alert"></p>
         </div>
         <div class="input-field">
           <label for="claimantContactInput">Contact Number (Optional)</label>
@@ -399,6 +401,7 @@
         </div>
       </div>
 
+      <div id="claimModalError" role="alert" aria-live="assertive" style="display:none;background:rgba(239,68,68,.12);border:1px solid rgba(239,68,68,.35);border-radius:6px;color:#fca5a5;font-size:.8rem;line-height:1.45;padding:.65rem .75rem;margin-bottom:1rem;"></div>
       <div style="display: flex; gap: 0.75rem; justify-content: flex-end;">
         <button type="button" class="btn btn-outline" onclick="closeClaimModal()" style="padding: 0.5rem 1rem;">Cancel</button>
         <button type="button" class="btn btn-primary" onclick="executeClaimToggle()" style="padding: 0.5rem 1.25rem;" id="claimModalBtn">Confirm Claim</button>

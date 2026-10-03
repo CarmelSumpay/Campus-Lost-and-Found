@@ -97,6 +97,8 @@ function togglePasswordVisibility(inputId, btn) {
 
         const data = await res.json();
         if (data.success) {
+          sessionStorage.setItem('currentUser', JSON.stringify(data.user));
+          sessionStorage.setItem('userRole', data.user.role);
           window.location.href = data.user.role === 'admin' ? '/admin.html' : '/';
         } else {
           showError(data.message || 'Login failed. Please check your credentials.');
@@ -131,6 +133,8 @@ function togglePasswordVisibility(inputId, btn) {
 
         const data = await res.json();
         if (data.success) {
+          sessionStorage.setItem('currentUser', JSON.stringify(data.user));
+          sessionStorage.setItem('userRole', data.user.role);
           window.location.href = '/';
         } else {
           showError(data.message || (data.errors ? data.errors.join(' ') : 'Registration failed.'));
