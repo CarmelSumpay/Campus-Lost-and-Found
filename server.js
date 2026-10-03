@@ -1,4 +1,6 @@
 // server.js - CSPC Lost & Found Management System (Node.js & Express)
+require('dotenv').config();
+
 const express = require('express');
 const session = require('express-session');
 const FileStore = require('session-file-store')(session);
