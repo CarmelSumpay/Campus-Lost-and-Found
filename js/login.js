@@ -97,6 +97,7 @@ function togglePasswordVisibility(inputId, btn) {
 
         const data = await res.json();
         if (data.success) {
+          if (data.emailSent === false) window.alert(data.message);
           sessionStorage.setItem('currentUser', JSON.stringify(data.user));
           sessionStorage.setItem('userRole', data.user.role);
           window.location.href = data.user.role === 'admin' ? '/admin.html' : '/';

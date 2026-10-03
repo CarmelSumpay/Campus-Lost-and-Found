@@ -5,6 +5,7 @@ const fs = require('fs');
 const path = require('path');
 const bcrypt = require('bcryptjs');
 const { validateUserAuth, sanitizeString } = require('../middleware/validate');
+const { sendRegistrationEmail } = require('../services/email');
 
 const DATA_DIR = process.env.DATA_DIR || path.join(__dirname, '..', 'data');
 const USERS_FILE = path.join(DATA_DIR, 'users.json');
@@ -99,9 +100,20 @@ router.post('/register', validateUserAuth, async (req, res) => {
     };
     await authenticateSession(req, sessionUser);
 
+    let emailSent = false;
+    try {
+      await sendRegistrationEmail(newUser);
+      emailSent = true;
+    } catch (error) {
+      console.error('Registration confirmation email could not be sent:', error.message);
+    }
+
     res.status(201).json({
       success: true,
-      message: 'Account registered successfully.',
+      message: emailSent
+        ? 'Account registered successfully. A confirmation email has been sent.'
+        : 'Account registered successfully, but the confirmation email could not be sent. Please contact support.',
+      emailSent,
       user: sessionUser
     });
   } catch (error) {

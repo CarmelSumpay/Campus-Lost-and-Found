@@ -14,6 +14,10 @@ let createApp;
 
 const adminPassword = 'AdminPass1!';
 const studentPassword = 'StudentPass1!';
+const smtpEnvironmentKeys = ['SMTP_HOST', 'SMTP_PORT', 'SMTP_SECURE', 'SMTP_USER', 'SMTP_PASS', 'SMTP_FROM'];
+const originalSmtpEnvironment = Object.fromEntries(
+  smtpEnvironmentKeys.map(key => [key, process.env[key]])
+);
 
 function fixtureUser(id, email, password, role) {
   return {
@@ -56,6 +60,7 @@ test.before(async () => {
   process.env.DATA_DIR = dataDir;
   process.env.NODE_ENV = 'test';
   process.env.SESSION_SECRET = 'test-only-session-secret';
+  smtpEnvironmentKeys.forEach(key => delete process.env[key]);
 
   const users = [
     fixtureUser('admin-test', 'admin@cspc.edu.ph', adminPassword, 'admin'),
@@ -155,7 +160,33 @@ test.after(async () => {
   fs.rmSync(dataDir, { recursive: true, force: true });
   delete process.env.DATA_DIR;
   delete process.env.SESSION_SECRET;
+  smtpEnvironmentKeys.forEach(key => {
+    if (originalSmtpEnvironment[key] === undefined) delete process.env[key];
+    else process.env[key] = originalSmtpEnvironment[key];
+  });
   process.env.NODE_ENV = 'development';
+});
+
+test('registration succeeds and reports when confirmation email SMTP is not configured', async () => {
+  const response = await fetch(`${baseUrl}/api/auth/register`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      fullName: 'New Student',
+      studentId: '1010011',
+      department: 'CCS',
+      email: 'new.student@my.cspc.edu.ph',
+      password: 'StudentPass1!'
+    })
+  });
+
+  assert.equal(response.status, 201);
+  const result = await response.json();
+  assert.equal(result.success, true);
+  assert.equal(result.emailSent, false);
+  assert.match(result.message, /confirmation email could not be sent/i);
+  const users = JSON.parse(fs.readFileSync(path.join(dataDir, 'users.json'), 'utf8'));
+  assert.ok(users.some(user => user.email === 'new.student@my.cspc.edu.ph'));
 });
 
 test('public item responses exclude private fields', async () => {
