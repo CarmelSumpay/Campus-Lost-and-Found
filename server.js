@@ -1,5 +1,5 @@
 // server.js - CSPC Lost & Found Management System (Node.js & Express)
-require('dotenv').config();
+if (process.env.NODE_ENV !== 'test') require('dotenv').config();
 
 const express = require('express');
 const session = require('express-session');
@@ -86,7 +86,7 @@ function createApp() {
 
 if (process.env.NODE_ENV !== 'test') {
   const PORT = process.env.PORT || 3000;
-  authRoutes.ensureAdminAccount();
+  authRoutes.removeBootstrapAdminAccount();
   createApp().listen(PORT, '0.0.0.0', () => console.log(`Server running at: http://localhost:${PORT}`));
 }
 

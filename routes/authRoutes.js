@@ -9,6 +9,14 @@ const { sendRegistrationEmail } = require('../services/email');
 
 const DATA_DIR = process.env.DATA_DIR || path.join(__dirname, '..', 'data');
 const USERS_FILE = path.join(DATA_DIR, 'users.json');
+const STUDENT_DEPARTMENTS = new Set([
+  'College of Computer Studies (CCS)',
+  'College of Engineering and Architecture (CEA)',
+  'College of Health Sciences (CHS)',
+  'College of Tourism, Hospitality and Business Management (CTHBM)',
+  'College of Technological and Developmental Education (CTDE)',
+  'College of Arts and Sciences (CAS)'
+]);
 
 function authenticateSession(req, user) {
   return new Promise((resolve, reject) => {
@@ -33,24 +41,10 @@ function saveUsers(users) {
   fs.writeFileSync(USERS_FILE, JSON.stringify(users, null, 2), 'utf8');
 }
 
-function ensureAdminAccount() {
+function removeBootstrapAdminAccount() {
   const users = getUsers();
-  const adminEmail = 'admin@cspc.edu.ph';
-
-  if (users.some(user => user.email.toLowerCase() === adminEmail)) return;
-
-  users.push({
-    id: 'usr-admin-01',
-    email: adminEmail,
-    passwordHash: '$2a$10$3zpZiqtvddqzByTCH5D88eT6Gapp81L8rfL1Y84Op1RYqFwcgNk42',
-    fullName: 'CSPC Administrator',
-    studentId: 'N/A',
-    role: 'admin',
-    department: 'Student Affairs and Services Office',
-    createdAt: new Date().toISOString()
-  });
-
-  saveUsers(users);
+  const remainingUsers = users.filter(user => user.id !== 'usr-admin-01');
+  if (remainingUsers.length !== users.length) saveUsers(remainingUsers);
 }
 
 // POST /api/auth/register
@@ -61,6 +55,12 @@ router.post('/register', validateUserAuth, async (req, res) => {
       return res.status(400).json({
         success: false,
         message: 'Student registration requires an @my.cspc.edu.ph email address.'
+      });
+    }
+    if (!STUDENT_DEPARTMENTS.has(department)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Select a valid college department.'
       });
     }
     const users = getUsers();
@@ -83,7 +83,7 @@ router.post('/register', validateUserAuth, async (req, res) => {
       fullName: sanitizeString(fullName) || 'CSPC Student',
       studentId: sanitizeString(studentId) || 'N/A',
       role: 'student', // default self-registration is student role
-      department: sanitizeString(department) || 'College of Computer Studies (CCS)',
+      department: sanitizeString(department),
       createdAt: new Date().toISOString()
     };
 
@@ -202,6 +202,6 @@ router.get('/me', (req, res) => {
   });
 });
 
-router.ensureAdminAccount = ensureAdminAccount;
+router.removeBootstrapAdminAccount = removeBootstrapAdminAccount;
 
 module.exports = router;

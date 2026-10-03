@@ -168,13 +168,25 @@ test.after(async () => {
 });
 
 test('registration succeeds and reports when confirmation email SMTP is not configured', async () => {
+  const missingDepartmentResponse = await fetch(`${baseUrl}/api/auth/register`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      fullName: 'New Student',
+      studentId: '1010011',
+      email: 'new.student@my.cspc.edu.ph',
+      password: 'StudentPass1!'
+    })
+  });
+  assert.equal(missingDepartmentResponse.status, 400);
+
   const response = await fetch(`${baseUrl}/api/auth/register`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
       fullName: 'New Student',
       studentId: '1010011',
-      department: 'CCS',
+      department: 'College of Computer Studies (CCS)',
       email: 'new.student@my.cspc.edu.ph',
       password: 'StudentPass1!'
     })
@@ -186,7 +198,9 @@ test('registration succeeds and reports when confirmation email SMTP is not conf
   assert.equal(result.emailSent, false);
   assert.match(result.message, /confirmation email could not be sent/i);
   const users = JSON.parse(fs.readFileSync(path.join(dataDir, 'users.json'), 'utf8'));
-  assert.ok(users.some(user => user.email === 'new.student@my.cspc.edu.ph'));
+  const registeredUser = users.find(user => user.email === 'new.student@my.cspc.edu.ph');
+  assert.ok(registeredUser);
+  assert.equal(registeredUser.department, 'College of Computer Studies (CCS)');
 });
 
 test('public item responses exclude private fields', async () => {
@@ -413,6 +427,10 @@ test('production requires a secret and persists secure sessions', async () => {
 
 test('production server starts when loaded as a hosting entry module', async () => {
   const bootDataDir = fs.mkdtempSync(path.join(os.tmpdir(), 'cspc-lostfound-boot-'));
+  fs.writeFileSync(path.join(bootDataDir, 'users.json'), JSON.stringify([
+    { id: 'usr-admin-01', email: 'legacy-admin@example.edu', role: 'admin' },
+    { id: 'kept-user', email: 'student@my.cspc.edu.ph', role: 'student' }
+  ]));
   const portProbe = net.createServer();
   await new Promise((resolve, reject) => {
     portProbe.once('error', reject);
@@ -457,6 +475,8 @@ test('production server starts when loaded as a hosting entry module', async () 
     await startup;
     const response = await fetch(`http://127.0.0.1:${port}/api/items`);
     assert.equal(response.status, 200);
+    const users = JSON.parse(fs.readFileSync(path.join(bootDataDir, 'users.json'), 'utf8'));
+    assert.deepEqual(users.map(user => user.id), ['kept-user']);
   } finally {
     if (child.exitCode === null) {
       child.kill();
