@@ -392,26 +392,55 @@
     .hotspots-row {
       display: flex;
       align-items: center;
-      gap: 0.5rem;
+      gap: 0.75rem;
       flex-wrap: wrap;
       margin-bottom: 1.25rem;
       font-size: 0.76rem;
       color: var(--text-muted);
     }
-    .hotspot-chip {
+    .location-filter-wrap {
+      position: relative;
+      flex: 1 1 420px;
+      min-width: 200px;
+    }
+    .location-filter-select {
+      width: 100%;
+      appearance: none;
+      -webkit-appearance: none;
+      -moz-appearance: none;
       background: rgba(255, 255, 255, 0.04);
       border: 1px solid rgba(59, 130, 246, 0.18);
-      border-radius: 20px;
-      padding: 0.25rem 0.75rem;
-      font-size: 0.72rem;
-      color: var(--text-muted);
+      border-radius: 12px;
+      padding: 0.7rem 2.75rem 0.7rem 0.9rem;
+      font-size: 0.78rem;
+      font-weight: 600;
+      color: var(--text-main);
       cursor: pointer;
-      transition: all 0.2s;
+      outline: none;
+      transition: border-color 0.2s, box-shadow 0.2s;
+      background-image: linear-gradient(45deg, transparent 50%, var(--blue-light) 50%), linear-gradient(135deg, var(--blue-light) 50%, transparent 50%);
+      background-position: calc(100% - 18px) calc(50% - 2px), calc(100% - 12px) calc(50% - 2px);
+      background-size: 6px 6px, 6px 6px;
+      background-repeat: no-repeat;
     }
-    .hotspot-chip:hover, .hotspot-chip.active {
+    .location-filter-select:focus {
       border-color: var(--blue-main);
-      color: var(--blue-light);
-      background: rgba(59, 130, 246, 0.15);
+      box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
+    }
+    .location-filter-select option {
+      background: #0f172a;
+      color: #f8fafc;
+    }
+    [data-theme='light'] .location-filter-select option {
+      background: #ffffff;
+      color: #0f172a;
+    }
+    .hotspots-row label {
+      font-weight: 700;
+      color: var(--blue-dark);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      margin-right: 0.1rem;
     }
 
     /* Slip Modal */
@@ -618,16 +647,20 @@
 
     <!-- Campus Location Hotspots based on CSPC Offices -->
     <div class="hotspots-row">
-      <span style="font-weight: 700; color: var(--blue-dark); text-transform: uppercase; font-size: 0.7rem; letter-spacing: 0.05em;">CSPC Offices &amp; Areas:</span>
-      <button class="hotspot-chip active" onclick="setLocationFilter('', this)">All Offices</button>
-      <button class="hotspot-chip" onclick="setLocationFilter('College of Computer Studies (CCS)', this)">College of Computer Studies (CCS)</button>
-      <button class="hotspot-chip" onclick="setLocationFilter('College of Engineering and Architecture (CEA)', this)">College of Engineering and Architecture (CEA)</button>
-      <button class="hotspot-chip" onclick="setLocationFilter('College of Health Sciences (CHS)', this)">College of Health Sciences (CHS)</button>
-      <button class="hotspot-chip" onclick="setLocationFilter('College of Tourism, Hospitality and Business Management (CTHBM)', this)">College of Tourism, Hospitality and Business Management (CTHBM)</button>
-      <button class="hotspot-chip" onclick="setLocationFilter('College of Technological and Developmental Education (CTDE)', this)">College of Technological and Developmental Education (CTDE)</button>
-      <button class="hotspot-chip" onclick="setLocationFilter('College of Arts and Sciences (CAS)', this)">College of Arts and Sciences (CAS)</button>
-      <button class="hotspot-chip" onclick="setLocationFilter('Graduate School', this)">Graduate School</button>
-      <button class="hotspot-chip" onclick="setLocationFilter('Buhi Campus', this)">Buhi Campus</button>
+      <label for="locationFilterSelect">CSPC Offices &amp; Areas:</label>
+      <div class="location-filter-wrap">
+        <select id="locationFilterSelect" class="location-filter-select" onchange="setLocationFilter(this.value)">
+          <option value="">All Offices</option>
+          <option value="College of Computer Studies (CCS)">College of Computer Studies (CCS)</option>
+          <option value="College of Engineering and Architecture (CEA)">College of Engineering and Architecture (CEA)</option>
+          <option value="College of Health Sciences (CHS)">College of Health Sciences (CHS)</option>
+          <option value="College of Tourism, Hospitality and Business Management (CTHBM)">College of Tourism, Hospitality and Business Management (CTHBM)</option>
+          <option value="College of Technological and Developmental Education (CTDE)">College of Technological and Developmental Education (CTDE)</option>
+          <option value="College of Arts and Sciences (CAS)">College of Arts and Sciences (CAS)</option>
+          <option value="Graduate School">Graduate School</option>
+          <option value="Buhi Campus">Buhi Campus</option>
+        </select>
+      </div>
     </div>
 
     <!-- Items Grid -->
@@ -1226,11 +1259,9 @@
       renderItems();
     }
 
-    function setLocationFilter(loc, el) {
-      currentLocationFilter = loc.toLowerCase();
+    function setLocationFilter(loc) {
+      currentLocationFilter = (loc || '').toLowerCase();
       currentPage = 1;
-      document.querySelectorAll('.hotspot-chip').forEach(c => c.classList.remove('active'));
-      el.classList.add('active');
       renderItems();
     }
 
