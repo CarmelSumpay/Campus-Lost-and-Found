@@ -34,16 +34,12 @@ let deleteTargetId = null;
       initNav();
       if (!await requireAdminSession()) return;
       refreshAdminItems();
-      renderClaimsTab();
+      refreshAdminClaims();
       window.setInterval(() => {
         refreshAdminItems();
         refreshAdminClaims();
       }, 5000);
 
-      document.getElementById('adminClaimsNavLink').addEventListener('click', event => {
-        event.preventDefault();
-        openAdminClaims();
-      });
       document.querySelectorAll('[data-admin-filter]').forEach(link => {
         link.addEventListener('click', event => {
           event.preventDefault();
@@ -57,9 +53,7 @@ let deleteTargetId = null;
           activeTab = tab.dataset.tab;
           document.querySelectorAll('.admin-tab').forEach(t => t.classList.remove('active'));
           tab.classList.add('active');
-          document.getElementById('tabItems').style.display  = activeTab === 'items'  ? 'block' : 'none';
-          document.getElementById('tabClaims').style.display = activeTab === 'claims' ? 'block' : 'none';
-          if (activeTab === 'claims') renderClaimsTab();
+          document.getElementById('tabItems').style.display = 'block';
         });
       });
 
@@ -133,10 +127,8 @@ let deleteTargetId = null;
         adminClaimsSignature = nextSignature;
         claimRequests = data.claims;
         renderItemsTable();
-        updateAdminNotificationBadge();
         const claimsStat = document.querySelectorAll('#adminStats .stat-number')[5];
         if (claimsStat) claimsStat.textContent = claimRequests.filter(claim => claim.status === 'pending').length;
-        if (activeTab === 'claims') renderClaimsTab();
       } catch (error) {
         // Keep the last claim snapshot when the API is temporarily unavailable.
       }
@@ -160,7 +152,6 @@ let deleteTargetId = null;
       `;
 
       renderItemsTable();
-      updateAdminNotificationBadge();
     }
 
     function showAdminItems(type) {
@@ -169,19 +160,6 @@ let deleteTargetId = null;
       adminCurrentPage = 1;
       renderItemsTable();
       document.getElementById('tabItems').scrollIntoView({ behavior: 'smooth', block: 'start' });
-    }
-
-    function openAdminClaims() {
-      document.querySelector('.admin-tab[data-tab="claims"]').click();
-      document.getElementById('tabClaims').scrollIntoView({ behavior: 'smooth', block: 'start' });
-    }
-
-    function updateAdminNotificationBadge() {
-      const pendingCount = claimRequests.filter(claim => claim.status === 'pending').length;
-      const badge = document.getElementById('adminNotificationBadge');
-      badge.textContent = pendingCount > 99 ? '99+' : String(pendingCount);
-      badge.style.display = pendingCount ? 'inline-flex' : 'none';
-      badge.setAttribute('aria-label', `${pendingCount} pending claim requests`);
     }
 
     function openAdminLogoutModal() {
@@ -318,44 +296,6 @@ let deleteTargetId = null;
       const totalPages = Math.max(1, Math.ceil(getFilteredAdminItems().length / adminItemsPerPage));
       adminCurrentPage = Math.max(1, Math.min(Number(page) || 1, totalPages));
       renderItemsTable();
-    }
-
-    async function renderClaimsTab() {
-      const mount = document.getElementById('claimsMount');
-      mount.innerHTML = '<div class="empty-state"><p>Loading claim requests...</p></div>';
-      try {
-        const response = await adminFetch('/api/items/claims', { cache: 'no-store' });
-        const data = await response.json();
-        if (!response.ok || !data.success) throw new Error(data.message || 'Unable to load claim requests.');
-        claimRequests = data.claims;
-        adminClaimsSignature = JSON.stringify(claimRequests);
-        renderItemsTable();
-        updateAdminNotificationBadge();
-        const claimsStat = document.querySelectorAll('#adminStats .stat-number')[5];
-        if (claimsStat) claimsStat.textContent = claimRequests.filter(claim => claim.status === 'pending').length;
-
-        if (claimRequests.length === 0) {
-          mount.innerHTML = '<div class="empty-state"><h3>No claim requests</h3><p>Submitted requests will appear here for moderator review.</p></div>';
-          return;
-        }
-
-        mount.innerHTML = claimRequests.map(claim => `
-          <div class="claim-card">
-            <div class="claim-card-header">
-              <div>
-                <h3>Claim for: ${escHtml(claim.itemTitle)}</h3>
-                <div class="claim-meta">Reference: ${escHtml(claim.itemRefCode)} · Submitted: ${formatDate(claim.createdAt)} (${timeAgo(claim.createdAt)})</div>
-              </div>
-              <span class="badge ${claim.status === 'pending' ? 'badge-lost' : claim.status === 'approved' ? 'badge-found' : 'badge-claimed'}" style="text-transform:capitalize;">${escHtml(claim.status)}</span>
-            </div>
-            ${claim.status === 'pending' ? `
-            <div style="display:flex;gap:.5rem;margin-top:.85rem;">
-              <button class="action-btn action-btn-claim" onclick="openClaimReview('${claim.id}')">Review Claim</button>
-            </div>` : ''}
-          </div>`).join('');
-      } catch (error) {
-        mount.innerHTML = `<div class="empty-state"><h3>Claims unavailable</h3><p>${escHtml(error.message)}</p></div>`;
-      }
     }
 
     async function updateItemClaimStatus(id, proof = '') {
@@ -518,7 +458,7 @@ let deleteTargetId = null;
         const data = await response.json();
         if (!response.ok || !data.success) throw new Error(data.message || 'Unable to review claim.');
         closeClaimReview();
-        await renderClaimsTab();
+        await refreshAdminClaims();
         await refreshAdminItems();
         showToast(data.message);
       } catch (error) {
