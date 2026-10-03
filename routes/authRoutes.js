@@ -41,7 +41,7 @@ function ensureAdminAccount() {
   users.push({
     id: 'usr-admin-01',
     email: adminEmail,
-    passwordHash: '$2a$10$D07/af8VBHl4SdhK5Fnhku9fnsUFTkBTCop4S.egyvfO//siDrfm.',
+    passwordHash: '$2a$10$3zpZiqtvddqzByTCH5D88eT6Gapp81L8rfL1Y84Op1RYqFwcgNk42',
     fullName: 'CSPC Administrator',
     studentId: 'N/A',
     role: 'admin',
