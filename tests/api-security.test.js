@@ -2,6 +2,8 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const os = require('node:os');
 const path = require('node:path');
+const { spawn } = require('node:child_process');
+const net = require('node:net');
 const test = require('node:test');
 const bcrypt = require('bcryptjs');
 
@@ -375,5 +377,60 @@ test('production requires a secret and persists secure sessions', async () => {
     await new Promise((resolve, reject) => productionServer.close(error => error ? reject(error) : resolve()));
     process.env.NODE_ENV = 'test';
     process.env.SESSION_SECRET = 'test-only-session-secret';
+  }
+});
+
+test('production server starts when loaded as a hosting entry module', async () => {
+  const bootDataDir = fs.mkdtempSync(path.join(os.tmpdir(), 'cspc-lostfound-boot-'));
+  const portProbe = net.createServer();
+  await new Promise((resolve, reject) => {
+    portProbe.once('error', reject);
+    portProbe.listen(0, '127.0.0.1', resolve);
+  });
+  const port = portProbe.address().port;
+  await new Promise((resolve, reject) => portProbe.close(error => error ? reject(error) : resolve()));
+
+  const child = spawn(process.execPath, ['-e', "require('./server')"], {
+    cwd: path.join(__dirname, '..'),
+    env: {
+      ...process.env,
+      DATA_DIR: bootDataDir,
+      NODE_ENV: 'production',
+      PORT: String(port),
+      SESSION_SECRET: 'test-module-start-secret'
+    },
+    stdio: ['ignore', 'pipe', 'pipe']
+  });
+  let logs = '';
+  const startup = new Promise((resolve, reject) => {
+    const timeout = setTimeout(() => reject(new Error(`Server did not start. Logs: ${logs}`)), 3500);
+    child.stdout.on('data', chunk => {
+      logs += chunk.toString();
+      if (logs.includes('Server running')) {
+        clearTimeout(timeout);
+        resolve();
+      }
+    });
+    child.stderr.on('data', chunk => { logs += chunk.toString(); });
+    child.once('error', error => {
+      clearTimeout(timeout);
+      reject(error);
+    });
+    child.once('exit', code => {
+      clearTimeout(timeout);
+      reject(new Error(`Server exited with code ${code}. Logs: ${logs}`));
+    });
+  });
+
+  try {
+    await startup;
+    const response = await fetch(`http://127.0.0.1:${port}/api/items`);
+    assert.equal(response.status, 200);
+  } finally {
+    if (child.exitCode === null) {
+      child.kill();
+      await new Promise(resolve => child.once('exit', resolve));
+    }
+    fs.rmSync(bootDataDir, { recursive: true, force: true });
   }
 });

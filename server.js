@@ -82,10 +82,10 @@ function createApp() {
   return app;
 }
 
-if (require.main === module) {
+if (process.env.NODE_ENV !== 'test') {
   const PORT = process.env.PORT || 3000;
   authRoutes.ensureAdminAccount();
-  createApp().listen(PORT, () => console.log(`Server running at: http://localhost:${PORT}`));
+  createApp().listen(PORT, '0.0.0.0', () => console.log(`Server running at: http://localhost:${PORT}`));
 }
 
 module.exports = { createApp };
