@@ -123,7 +123,9 @@ body::after {
 .nav-links {
   display: flex;
   align-items: center;
-  gap: 1.25rem;
+  gap: 1.5rem;
+  margin-left: auto;
+  margin-right: auto;
 }
 
 .nav-links a {
@@ -145,7 +147,8 @@ body::after {
   color: var(--blue-main);
 }
 
-.nav-btn-action {
+.nav-btn-action,
+.nav-register-btn {
   border-color: rgba(59, 130, 246, 0.4) !important;
   color: var(--blue-light) !important;
   padding: 0 0.85rem !important;
@@ -166,6 +169,19 @@ body::after {
   background: rgba(59, 130, 246, 0.12) !important;
   border-color: var(--blue-main) !important;
   transform: translateY(-1px);
+}
+
+.nav-register-btn {
+  background: transparent !important;
+  border-color: rgba(147, 197, 253, 0.38) !important;
+}
+
+.nav-register-mobile {
+  display: none !important;
+}
+
+.nav-register-btn:hover {
+  background: rgba(59, 130, 246, 0.1) !important;
 }
 
 [data-theme='light'] .nav-btn-action {
@@ -190,6 +206,10 @@ body::after {
 }
 
 .nav-signin-btn {
+  background: var(--blue-main) !important;
+  border: 1px solid var(--blue-main) !important;
+  color: #ffffff !important;
+  box-shadow: 0 5px 16px rgba(59, 130, 246, 0.24);
   height: 36px !important;
   display: inline-flex !important;
   align-items: center !important;
@@ -199,6 +219,13 @@ body::after {
   border-radius: 8px !important;
   white-space: nowrap !important;
   line-height: 1 !important;
+}
+
+.nav-signin-btn:hover {
+  background: #2563eb !important;
+  border-color: #2563eb !important;
+  color: #ffffff !important;
+  transform: translateY(-1px);
 }
 
 .theme-toggle {
@@ -452,12 +479,13 @@ h2 {
 
 .hero-greeting {
   font-size: 1.1rem;
-  color: var(--text-muted);
+  color: #cbd5e1;
   margin-bottom: 0.4rem;
+  font-weight: 600;
 }
 
 .hero-name {
-  font-size: clamp(2.4rem, 6vw, 4rem);
+  font-size: clamp(3rem, 7vw, 5rem);
   font-weight: 900;
   letter-spacing: -0.02em;
   line-height: 1.25;
@@ -569,6 +597,28 @@ h2 {
   box-shadow: 0 0 40px rgba(59, 130, 246, 0.25), 0 8px 32px rgba(0,0,0,0.4);
 }
 
+.hero-seal {
+  width: 180px;
+  height: 180px;
+  border: 1px solid rgba(147, 197, 253, 0.28);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: radial-gradient(circle, rgba(59, 130, 246, 0.16), rgba(17, 24, 39, 0.25) 68%);
+  box-shadow: 0 0 0 8px rgba(59, 130, 246, 0.05), 0 0 36px rgba(59, 130, 246, 0.18);
+}
+
+.hero-avatar .hero-seal img {
+  width: 132px;
+  height: 132px;
+  border: 0;
+  border-radius: 50%;
+  object-fit: contain;
+  object-position: center;
+  box-shadow: none;
+}
+
 /* ── TOOLS ── */
 .tools-section h2 {
   margin-bottom: 1.75rem;
@@ -601,6 +651,51 @@ h2 {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
   gap: 1.25rem;
+  align-items: stretch;
+  grid-auto-rows: minmax(390px, auto);
+}
+
+.projects-grid > .project-card {
+  min-width: 0;
+  min-height: 390px;
+  width: 100%;
+  height: 100%;
+  aspect-ratio: auto;
+}
+
+.projects-grid .item-card-meta-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.65rem;
+  min-width: 0;
+}
+
+.projects-grid .item-card-category-ref {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 0.3rem 0.55rem;
+  min-width: 0;
+}
+
+.projects-grid .item-card-category-ref .ref-code {
+  margin-left: 0 !important;
+  overflow-wrap: anywhere;
+}
+
+.projects-grid .item-badge {
+  flex: 0 0 auto;
+  white-space: nowrap;
+}
+
+.projects-grid .item-card-description {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  overflow: hidden;
+  min-height: 2.72em;
 }
 
 .project-card {
@@ -839,6 +934,14 @@ select option {
 }
 
 @media (max-width: 768px) {
+  .nav-actions > .nav-register-btn {
+    display: none !important;
+  }
+
+  .nav-links .nav-register-mobile {
+    display: inline-flex !important;
+  }
+
   .hero-section {
     flex-direction: column-reverse;
     text-align: center;
@@ -846,6 +949,16 @@ select option {
     gap: 2rem;
     min-height: auto;
     padding-top: 3rem;
+  }
+
+  .hero-seal {
+    width: 150px;
+    height: 150px;
+  }
+
+  .hero-avatar .hero-seal img {
+    width: 110px;
+    height: 110px;
   }
 
   .hero-bio {
@@ -883,6 +996,11 @@ select option {
 
   .nav-links.open {
     display: flex;
+  }
+
+  .nav-links {
+    margin-left: 0;
+    margin-right: 0;
   }
 
   .menu-toggle {

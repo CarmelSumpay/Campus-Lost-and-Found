@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>CSPC Lost &amp; Found Management System</title>
+  <title>Back2You</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="stylesheet" href="style.css" />
   <script>
@@ -26,21 +26,44 @@
       border-radius: 12px;
       padding: 0.9rem 1.4rem;
       min-width: 110px;
+      appearance: none;
+      display: flex;
+      flex-direction: column;
+      align-items: flex-start;
+      text-align: left;
+      color: var(--text-main);
+      cursor: pointer;
+      transition: transform 0.18s ease, border-color 0.18s ease, box-shadow 0.18s ease, background 0.18s ease;
+    }
+    .stat-box:hover,
+    .stat-box.active {
+      transform: translateY(-2px);
+      border-color: rgba(96, 165, 250, 0.65);
+      background: rgba(59, 130, 246, 0.1);
+      box-shadow: 0 8px 22px rgba(59, 130, 246, 0.16);
+    }
+    .stat-box:focus-visible {
+      outline: 2px solid #93c5fd;
+      outline-offset: 3px;
     }
     .stat-val {
+      display: block;
       font-size: 1.75rem;
       font-weight: 900;
       color: var(--blue-main);
       line-height: 1;
     }
     .stat-lbl {
+      display: block;
       font-size: 0.72rem;
       font-weight: 600;
-      color: var(--text-muted);
+      color: #cbd5e1;
       letter-spacing: 0.05em;
       text-transform: uppercase;
       margin-top: 0.35rem;
     }
+    [data-theme='light'] .stat-lbl { color: #475569; }
+    [data-theme='light'] .stat-box { color: #0f172a; }
 
     /* ── SIMPLE REPORT FORM ── */
     .simple-card {
@@ -558,20 +581,21 @@
     <div class="navbar-container">
       <a href="/" class="nav-logo">
         <img src="cspc-logo.png" alt="CSPC Logo" />
-        <span class="nav-logo-full">CSPC Lost &amp; Found Management System</span>
-        <span class="nav-logo-short">CSPC Lost &amp; Found</span>
+        <span class="nav-logo-full">Back2You</span>
+        <span class="nav-logo-short">Back2You</span>
       </a>
       <div class="nav-links" id="navLinks">
         <a href="#items">Items</a>
         <a href="#report">Report Item</a>
-        <button type="button" class="btn btn-outline nav-btn-action" onclick="handleOpenRegisterBelonging()">🏷️ Register Belonging</button>
+        <button type="button" class="btn btn-outline nav-btn-action nav-register-btn nav-register-mobile" onclick="handleOpenRegisterBelonging()">🏷️ Register Belonging</button>
       </div>
       <div class="nav-actions">
+        <button type="button" class="btn btn-outline nav-btn-action nav-register-btn" onclick="handleOpenRegisterBelonging()">🏷️ Register Belonging</button>
         <button type="button" class="theme-toggle" id="themeToggleBtn" onclick="toggleTheme()" title="Toggle Theme" aria-label="Toggle theme">
           <span class="theme-toggle-icon">🌙</span>
         </button>
         <div id="userNavSlot" class="user-nav-slot">
-          <a href="/login" class="btn btn-outline nav-signin-btn">Sign In</a>
+          <a href="/login" class="btn btn-primary nav-signin-btn">Sign In</a>
         </div>
         <button class="menu-toggle" id="menuToggle" aria-label="Toggle navigation menu" onclick="toggleMobileNav(event)">
           <span></span><span></span><span></span>
@@ -584,33 +608,33 @@
   <header class="hero-section" style="min-height: auto; padding: 4rem 1.5rem 3rem; align-items: center;">
     <div class="hero-text">
       <p class="hero-greeting">Camarines Sur Polytechnic Colleges</p>
-      <h1 class="hero-name">Lost &amp; Found Management System</h1>
+      <h1 class="hero-name">Back2You</h1>
       
       <!-- Quick Stats -->
       <div class="hero-stats">
-        <div class="stat-box">
-          <div class="stat-val" id="statTotal">0</div>
-          <div class="stat-lbl">Total Items</div>
-        </div>
-        <div class="stat-box">
-          <div class="stat-val" id="statLost" style="color: #f87171;">0</div>
-          <div class="stat-lbl">Lost</div>
-        </div>
-        <div class="stat-box">
-          <div class="stat-val" id="statFound" style="color: #4ade80;">0</div>
-          <div class="stat-lbl">Found</div>
-        </div>
-        <div class="stat-box">
-          <div class="stat-val" id="statClaimed" style="color: var(--blue-main);">0</div>
-          <div class="stat-lbl">Claimed</div>
-        </div>
+        <button type="button" class="stat-box active" data-filter="all" aria-label="Show all items" aria-pressed="true" onclick="setFilter('all', this)">
+          <span class="stat-val" id="statTotal">0</span>
+          <span class="stat-lbl">Total Items</span>
+        </button>
+        <button type="button" class="stat-box" data-filter="lost" aria-label="Show lost items" aria-pressed="false" onclick="setFilter('lost', this)">
+          <span class="stat-val" id="statLost" style="color: #f87171;">0</span>
+          <span class="stat-lbl">Lost</span>
+        </button>
+        <button type="button" class="stat-box" data-filter="found" aria-label="Show found items" aria-pressed="false" onclick="setFilter('found', this)">
+          <span class="stat-val" id="statFound" style="color: #4ade80;">0</span>
+          <span class="stat-lbl">Found</span>
+        </button>
+        <button type="button" class="stat-box" data-filter="claimed" aria-label="Show claimed items" aria-pressed="false" onclick="setFilter('claimed', this)">
+          <span class="stat-val" id="statClaimed" style="color: var(--blue-main);">0</span>
+          <span class="stat-lbl">Claimed</span>
+        </button>
       </div>
     </div>
 
     <!-- CSPC Logo in Hero -->
     <div class="hero-avatar" style="flex-shrink: 0; text-align: center;">
-      <div style="width: 150px; height: 150px; border-radius: 50%; background: rgba(255,255,255,0.06); border: 2px solid var(--border); display: flex; align-items: center; justify-content: center; box-shadow: 0 0 35px rgba(59, 130, 246, 0.25); margin: 0 auto; backdrop-filter: blur(8px);">
-        <img src="cspc-logo.png" alt="CSPC Official Logo" style="width: 125px; height: 125px; object-fit: contain; border-radius: 50%;" />
+      <div class="hero-seal">
+        <img src="cspc-logo.png" alt="CSPC Official Logo" />
       </div>
     </div>
   </header>
@@ -627,11 +651,11 @@
         <input type="text" id="searchInput" placeholder="Search by item name, reference code, location, or details..." oninput="fetchAndRenderItems()" />
       </div>
       <div class="filter-chips">
-        <button class="chip active" onclick="setFilter('all', this)">All</button>
-        <button class="chip" onclick="setFilter('lost', this)">Lost</button>
-        <button class="chip" onclick="setFilter('found', this)">Found</button>
-        <button class="chip" onclick="setFilter('claimed', this)">Claimed</button>
-        <button class="chip chip-my-vault" id="chipMyBelongings" onclick="setFilter('registered', this)" style="display: none;">🔒 My Belongings (<span id="myBelongingsCount">0</span>)</button>
+        <button class="chip active" data-filter="all" onclick="setFilter('all', this)">All</button>
+        <button class="chip" data-filter="lost" onclick="setFilter('lost', this)">Lost</button>
+        <button class="chip" data-filter="found" onclick="setFilter('found', this)">Found</button>
+        <button class="chip" data-filter="claimed" onclick="setFilter('claimed', this)">Claimed</button>
+        <button class="chip chip-my-vault" data-filter="registered" id="chipMyBelongings" onclick="setFilter('registered', this)" style="display: none;">🔒 My Belongings (<span id="myBelongingsCount">0</span>)</button>
       </div>
     </div>
 
@@ -1195,7 +1219,7 @@
       <img src="cspc-logo.png" alt="CSPC Logo" style="width: 38px; height: 38px; object-fit: contain; border-radius: 50%; background: #ffffff; padding: 2px;" />
       <div>
         <p style="font-weight: 700; color: var(--text-main);">Camarines Sur Polytechnic Colleges</p>
-        <p>Lost &amp; Found Management System</p>
+        <p>Back2You</p>
       </div>
     </div>
     <div class="footer-right">
@@ -1371,8 +1395,8 @@
             <div class="project-card" id="item-card-${item.id}" style="border-color: rgba(59,130,246,0.45); background: rgba(59,130,246,0.04);">
               <div class="project-card-header">
                 <div style="flex: 1;">
-                  <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 0.5rem;">
-                    <div>
+                  <div class="item-card-meta-row">
+                    <div class="item-card-category-ref">
                       <span class="project-type" style="color: #93c5fd;">${escapeHtml(item.category)}</span>
                       <span class="ref-code" style="margin-left: 0.4rem; color: #60a5fa;">${escapeHtml(item.refCode || '')}</span>
                     </div>
@@ -1386,7 +1410,7 @@
                 🛡️ <strong>Preventive Protection Active:</strong> Paste QR sticker onto this item. If someone scans it, an anonymous notification goes straight to your account.
               </div>
 
-              <p style="margin-top: 0.25rem;">${escapeHtml(item.desc)}</p>
+              <p class="item-card-description" style="margin-top: 0.25rem;">${escapeHtml(item.desc)}</p>
 
               <div class="card-meta-line">
                 <span><strong>Primary Building:</strong> ${escapeHtml(item.location)}</span>
@@ -1449,8 +1473,8 @@
           <div class="project-card" id="item-card-${item.id}">
             <div class="project-card-header">
               <div style="flex: 1;">
-                <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 0.5rem;">
-                  <div>
+                <div class="item-card-meta-row">
+                  <div class="item-card-category-ref">
                     <span class="project-type">${escapeHtml(item.category)}</span>
                     <span class="ref-code" style="margin-left: 0.4rem;">${escapeHtml(item.refCode || '')}</span>
                   </div>
@@ -1463,7 +1487,7 @@
             ${matchBannerHtml}
             ${photoHtml}
 
-            <p style="margin-top: 0.25rem;">${escapeHtml(item.desc)}</p>
+            <p class="item-card-description" style="margin-top: 0.25rem;">${escapeHtml(item.desc)}</p>
 
             <div class="card-meta-line">
               <span><strong>Location:</strong> ${escapeHtml(item.location)}</span>
@@ -1541,8 +1565,15 @@
 
     function setFilter(filter, el) {
       currentFilter = filter;
-      document.querySelectorAll('.filter-chips .chip').forEach(c => c.classList.remove('active'));
-      el.classList.add('active');
+      currentPage = 1;
+      document.querySelectorAll('.filter-chips .chip').forEach(chip => {
+        chip.classList.toggle('active', chip.dataset.filter === filter);
+      });
+      document.querySelectorAll('.hero-stats .stat-box').forEach(stat => {
+        const active = stat.dataset.filter === filter;
+        stat.classList.toggle('active', active);
+        stat.setAttribute('aria-pressed', String(active));
+      });
       fetchAndRenderItems();
     }
 
