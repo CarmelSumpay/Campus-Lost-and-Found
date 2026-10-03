@@ -152,7 +152,9 @@ let deleteTargetId = null;
 
     function showAdminItems(type) {
       if (activeTab !== 'items') document.querySelector('.admin-tab[data-tab="items"]').click();
-      document.getElementById('adminFilterType').value = type || '';
+      const typeSelect = document.getElementById('adminFilterType');
+      typeSelect.value = type || '';
+      syncButtonSelect(typeSelect);
       adminCurrentPage = 1;
       renderItemsTable();
       document.getElementById('tabItems').scrollIntoView({ behavior: 'smooth', block: 'start' });

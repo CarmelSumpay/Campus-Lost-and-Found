@@ -125,6 +125,11 @@ function togglePasswordVisibility(inputId, btn) {
       const email = document.getElementById('regEmail').value.trim();
       const password = document.getElementById('regPassword').value;
 
+      if (!department) {
+        showError('Please select your college department.');
+        return;
+      }
+
       try {
         const res = await fetch('/api/auth/register', {
           method: 'POST',

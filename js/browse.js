@@ -22,7 +22,9 @@ let activeType = 'all';
         });
       }
       if (statusParam) {
-        document.getElementById('filterStatus').value = statusParam;
+        const statusSelect = document.getElementById('filterStatus');
+        statusSelect.value = statusParam;
+        syncButtonSelect(statusSelect);
       }
 
       // Tab clicks
@@ -45,6 +47,9 @@ let activeType = 'all';
         document.getElementById('filterCategory').value = '';
         document.getElementById('filterLocation').value = '';
         document.getElementById('filterStatus').value = '';
+        ['filterCategory', 'filterLocation', 'filterStatus'].forEach(id => {
+          syncButtonSelect(document.getElementById(id));
+        });
         activeType = 'all';
         document.querySelectorAll('.type-tab').forEach(t => t.classList.toggle('active', t.dataset.type === 'all'));
         renderGrid();
