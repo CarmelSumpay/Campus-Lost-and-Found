@@ -315,6 +315,14 @@
       color: var(--blue-main);
       -webkit-text-fill-color: var(--blue-main);
     }
+    [data-theme='light'] #adminPanel .page-header h1 {
+      background: linear-gradient(90deg, #0f172a 40%, var(--blue-main) 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      font-weight: 800;
+      letter-spacing: -0.02em;
+    }
     #adminLogoutModal {
       position: fixed;
       inset: 0;
