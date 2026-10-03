@@ -51,11 +51,9 @@
     .admin-tabs { margin-bottom: 1rem; }
 
     /* ── Table ── */
-    .admin-table-wrap {
-      overflow-x: auto;
-      border-radius: 14px;
-      border: 1px solid var(--border);
-    }
+    .admin-table-card { overflow: hidden; border: 1px solid var(--border); border-radius: 14px; }
+    .overflow-x-auto { max-width: 100%; overflow-x: auto; }
+    .admin-table-wrap { overflow-y: hidden; }
     table {
       width: 100%;
       border-collapse: collapse;
@@ -70,18 +68,32 @@
       word-break: break-word;
       padding: 12px 10px;
     }
-    #adminItemsTable .actions-cell { overflow: visible; text-overflow: clip; white-space: normal; }
+    #adminItemsTable .status-cell { overflow: hidden; white-space: nowrap; }
     #adminItemsTable .status-cell .badge { white-space: nowrap; word-break: normal; }
+    .admin-cell-truncate { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .reporter-contact { color: var(--text-muted); font-size: .72rem; }
+    #adminItemsTable .action-buttons { display: flex; align-items: stretch; gap: .35rem; }
+    #adminItemsTable .actions-cell .action-btn {
+      display: flex;
+      flex: 1 1 0;
+      min-width: 0;
+      min-height: 34px;
+      align-items: center;
+      justify-content: center;
+      padding: .35rem .4rem;
+      line-height: 1.2;
+      text-align: center;
+      white-space: normal;
+    }
     .admin-pagination {
       display: flex;
-      align-items: center;
       justify-content: space-between;
+      align-items: center;
       gap: 1rem;
       flex-wrap: wrap;
+      width: 100%;
       padding: .85rem 1rem;
-      border: 1px solid var(--border);
-      border-top: 0;
-      border-radius: 0 0 12px 12px;
+      border-top: 1px solid var(--border);
     }
     .pagination-summary { color: var(--text-muted); font-size: .78rem; }
     .pagination-controls { display: flex; align-items: center; gap: .35rem; flex-wrap: wrap; }
@@ -208,6 +220,8 @@
     .claim-review-section strong { color: var(--text-main); }
     .claim-review-section img { display: block; max-width: 100%; max-height: 220px; margin-top: .65rem; border-radius: 6px; object-fit: contain; }
     .claim-review-input { width: 100%; margin-top: .75rem; padding: .65rem; border: 1px solid var(--border); border-radius: 6px; background: var(--bg-dark2); color: var(--text-main); resize: vertical; }
+    .claim-review-reject { border: 1.5px solid rgba(239,68,68,.4); color: #f87171; background: transparent; }
+    .claim-review-reject:hover { border-color: #f87171; background: rgba(239,68,68,.1); transform: translateY(-2px); }
     .admin-status-pending { color: #facc15 !important; border-color: rgba(250,204,21,.4) !important; background: rgba(250,204,21,.1) !important; }
     .admin-status-rejected { color: #f87171 !important; border-color: rgba(248,113,113,.4) !important; background: rgba(248,113,113,.1) !important; }
     [data-theme='light'] .claim-review-dialog { background: #fff; }
@@ -293,7 +307,7 @@
       text-align: left;
       box-sizing: border-box;
     }
-    #adminItemsTable { min-width: 0; }
+    #adminItemsTable { min-width: 1180px; }
     #adminPanel .page-header h1 {
       font-size: 2.2rem;
       font-weight: 800;
@@ -421,18 +435,19 @@
           </select>
           <button class="btn btn-primary" id="exportBtn" style="font-size:.8rem;padding:.55rem 1rem;">Export CSV</button>
         </div>
-        <div class="admin-table-wrap">
+        <div class="admin-table-card">
+          <div class="admin-table-wrap overflow-x-auto">
           <table id="adminItemsTable">
             <colgroup>
               <col style="width:5%" />
+              <col style="width:13%" />
+              <col style="width:8%" />
+              <col style="width:10%" />
+              <col style="width:15%" />
+              <col style="width:12%" />
+              <col style="width:8%" />
               <col style="width:14%" />
-              <col style="width:8%" />
-              <col style="width:11%" />
-              <col style="width:18%" />
-              <col style="width:16%" />
-              <col style="width:9%" />
-              <col style="width:8%" />
-              <col style="width:11%" />
+              <col style="width:15%" />
             </colgroup>
             <thead>
               <tr>
@@ -449,10 +464,11 @@
             </thead>
             <tbody id="adminTableBody"></tbody>
           </table>
-        </div>
-        <div class="admin-pagination" id="adminPagination" aria-label="Items table pagination">
-          <span class="pagination-summary" id="paginationSummary" aria-live="polite"></span>
-          <div class="pagination-controls" id="paginationControls"></div>
+          </div>
+          <div class="admin-pagination" id="adminPagination" aria-label="Items table pagination">
+            <span class="pagination-summary" id="paginationSummary" aria-live="polite"></span>
+            <div class="pagination-controls" id="paginationControls"></div>
+          </div>
         </div>
         <div id="adminEmptyState" style="display:none;" class="empty-state">
           <h3>No items found</h3>
@@ -490,7 +506,7 @@
       <div id="claimReviewDecisionFields"></div>
       <div class="claim-review-actions" style="justify-content:flex-end;margin-top:1rem;flex-wrap:wrap;">
         <button type="button" class="btn btn-outline" onclick="closeClaimReview()">Close</button>
-        <button type="button" class="action-btn action-btn-delete" id="claimRejectButton" onclick="prepareClaimDecision('rejected')">Reject Claim</button>
+        <button type="button" class="btn claim-review-reject" id="claimRejectButton" onclick="prepareClaimDecision('rejected')">Reject Claim</button>
         <button type="button" class="btn btn-primary" id="claimApproveButton" onclick="prepareClaimDecision('approved')">Approve Claim</button>
       </div>
     </div>
@@ -577,7 +593,7 @@
       normalized.status = item.status || item.type || 'pending';
       normalized.desc = item.desc || item.description || '';
       normalized.description = item.description || item.desc || '';
-      normalized.reporterName = item.reporterName || item.contact || '—';
+      normalized.reporterName = item.reporterName || '';
       normalized.reporterContact = item.reporterContact || item.contact || item.reporterEmail || '';
       normalized.dateLost = item.dateLost || (item.type === 'lost' ? item.date || item.createdAt : '');
       normalized.dateFound = item.dateFound || (item.type === 'found' ? item.date || item.createdAt : '');
@@ -734,6 +750,7 @@
             : latestClaim?.status === 'rejected'
               ? '<span class="badge admin-status-rejected">Rejected · Available</span>'
               : statusBadge(item.status);
+            const reporterValues = [...new Set([item.reporterName, item.reporterContact].filter(value => value && value !== '—'))];
         const rowNumber = startIndex + idx + 1;
         return `
         <tr>
@@ -743,12 +760,14 @@
           </td>
           <td title="${escHtml(item.type)}"><span class="badge ${item.type === 'lost' ? 'badge-lost' : 'badge-found'}">${escHtml(item.type)}</span></td>
           <td title="${escHtml(item.category)}">${escHtml(item.category)}</td>
-          <td title="${escHtml(item.location)}">${escHtml(item.location)}</td>
-          <td title="${escHtml(`${item.reporterName} ${item.reporterContact}`)}">${escHtml(item.reporterName)}<br><span style="font-size:.72rem;">${escHtml(item.reporterContact)}</span></td>
+          <td title="${escHtml(item.location)}"><span class="admin-cell-truncate">${escHtml(item.location)}</span></td>
+          <td title="${escHtml(reporterValues.join(' · ') || '—')}">${reporterValues.length
+            ? reporterValues.map((value, index) => `<span class="admin-cell-truncate${index ? ' reporter-contact' : ''}">${escHtml(value)}</span>`).join('')
+            : '—'}</td>
           <td title="${escHtml(date)}">${date}</td>
           <td class="status-cell" title="${pendingClaim ? 'Pending Verification' : latestClaim?.status === 'rejected' && !item.claimed ? 'Rejected · Available' : escHtml(item.status)}">${itemStatus}</td>
           <td class="actions-cell">
-            <div style="display:flex;gap:.35rem;flex-wrap:wrap;">
+            <div class="action-buttons">
               ${pendingClaim ? `<button class="action-btn action-btn-claim" onclick="openClaimReview('${pendingClaim.id}')">Review Claim</button>` : ''}
               ${canRestore ? `<button class="action-btn action-btn-restore" onclick="markRestore('${item.id}')">Restore</button>` : ''}
               <button class="action-btn action-btn-delete" onclick="openDeleteModal('${item.id}','${escHtml(item.title)}')">Delete</button>
