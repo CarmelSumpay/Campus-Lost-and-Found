@@ -39,7 +39,10 @@ async function login(email, password) {
     body: JSON.stringify({ email, password })
   });
   assert.equal(response.status, 200);
-  return response.headers.get('set-cookie').split(';')[0];
+  const cookie = response.headers.get('set-cookie').split(';')[0];
+  const sessionResponse = await fetch(`${baseUrl}/api/auth/me`, { headers: { Cookie: cookie } });
+  assert.equal((await sessionResponse.json()).authenticated, true);
+  return cookie;
 }
 
 function reportFormData(photo) {
@@ -201,6 +204,35 @@ test('registration succeeds and reports when confirmation email SMTP is not conf
   const registeredUser = users.find(user => user.email === 'new.student@my.cspc.edu.ph');
   assert.ok(registeredUser);
   assert.equal(registeredUser.department, 'College of Computer Studies (CCS)');
+
+  const sessionCookie = response.headers.get('set-cookie').split(';')[0];
+  await new Promise((resolve, reject) => appServer.close(error => error ? reject(error) : resolve()));
+  appServer = createApp().listen(0);
+  await new Promise(resolve => appServer.once('listening', resolve));
+  baseUrl = `http://127.0.0.1:${appServer.address().port}`;
+
+  const sessionResponse = await fetch(`${baseUrl}/api/auth/me`, {
+    headers: { Cookie: sessionCookie }
+  });
+  assert.equal((await sessionResponse.json()).authenticated, true);
+
+  const itemsResponse = await fetch(`${baseUrl}/api/items`);
+  assert.equal((await itemsResponse.json()).items.length, 5);
+
+  const duplicateResponse = await fetch(`${baseUrl}/api/auth/register`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      fullName: 'New Student',
+      studentId: '1010011',
+      department: 'College of Computer Studies (CCS)',
+      email: 'new.student@my.cspc.edu.ph',
+      password: 'StudentPass1!'
+    })
+  });
+  assert.equal(duplicateResponse.status, 409);
+  assert.equal(JSON.parse(fs.readFileSync(path.join(dataDir, 'users.json'), 'utf8'))
+    .filter(user => user.email === 'new.student@my.cspc.edu.ph').length, 1);
 });
 
 test('public item responses exclude private fields', async () => {

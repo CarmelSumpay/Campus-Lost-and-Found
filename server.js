@@ -21,8 +21,8 @@ function createApp() {
   }
 
   fs.mkdirSync(path.join(dataDir, 'uploads'), { recursive: true });
+  fs.mkdirSync(path.join(dataDir, 'sessions'), { recursive: true });
   if (isProduction) {
-    fs.mkdirSync(path.join(dataDir, 'sessions'), { recursive: true });
     app.set('trust proxy', 1);
   }
 
@@ -31,7 +31,7 @@ function createApp() {
   app.use(session({
     name: 'cspc.sid',
     secret: sessionSecret,
-    store: isProduction ? new FileStore({ path: path.join(dataDir, 'sessions'), ttl: 86400, retries: 0 }) : undefined,
+    store: new FileStore({ path: path.join(dataDir, 'sessions'), ttl: 86400, retries: 0 }),
     resave: false,
     saveUninitialized: false,
     cookie: {

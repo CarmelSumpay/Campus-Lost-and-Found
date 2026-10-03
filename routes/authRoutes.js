@@ -1,11 +1,11 @@
 // routes/authRoutes.js - User Authentication, Registration, and Session Management
 const express = require('express');
 const router = express.Router();
-const fs = require('fs');
 const path = require('path');
 const bcrypt = require('bcryptjs');
 const { validateUserAuth, sanitizeString } = require('../middleware/validate');
 const { sendRegistrationEmail } = require('../services/email');
+const { readJsonArray, writeJsonArray } = require('../services/jsonStore');
 
 const DATA_DIR = process.env.DATA_DIR || path.join(__dirname, '..', 'data');
 const USERS_FILE = path.join(DATA_DIR, 'users.json');
@@ -23,22 +23,20 @@ function authenticateSession(req, user) {
     req.session.regenerate(error => {
       if (error) return reject(error);
       req.session.user = user;
-      resolve();
+      req.session.save(saveError => {
+        if (saveError) return reject(saveError);
+        resolve();
+      });
     });
   });
 }
 
 function getUsers() {
-  try {
-    const data = fs.readFileSync(USERS_FILE, 'utf8');
-    return JSON.parse(data);
-  } catch (err) {
-    return [];
-  }
+  return readJsonArray(USERS_FILE);
 }
 
 function saveUsers(users) {
-  fs.writeFileSync(USERS_FILE, JSON.stringify(users, null, 2), 'utf8');
+  writeJsonArray(USERS_FILE, users);
 }
 
 function removeBootstrapAdminAccount() {

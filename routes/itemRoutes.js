@@ -7,6 +7,7 @@ const crypto = require('crypto');
 const multer = require('multer');
 const { validateItemReport, sanitizeString } = require('../middleware/validate');
 const { requireAuth, requireRole } = require('../middleware/auth');
+const { readJsonArray, writeJsonArray } = require('../services/jsonStore');
 
 const DATA_DIR = process.env.DATA_DIR || path.join(__dirname, '..', 'data');
 const ITEMS_FILE = path.join(DATA_DIR, 'items.json');
@@ -70,16 +71,11 @@ function publicItemView(item, potentialMatch = null) {
 }
 
 function getItems() {
-  try {
-    const data = fs.readFileSync(ITEMS_FILE, 'utf8');
-    return JSON.parse(data);
-  } catch (err) {
-    return [];
-  }
+  return readJsonArray(ITEMS_FILE);
 }
 
 function saveItems(items) {
-  fs.writeFileSync(ITEMS_FILE, JSON.stringify(items, null, 2), 'utf8');
+  writeJsonArray(ITEMS_FILE, items);
 }
 
 function isItemClaimed(item) {
@@ -87,15 +83,11 @@ function isItemClaimed(item) {
 }
 
 function getClaims() {
-  try {
-    return JSON.parse(fs.readFileSync(CLAIMS_FILE, 'utf8'));
-  } catch (err) {
-    return [];
-  }
+  return readJsonArray(CLAIMS_FILE);
 }
 
 function saveClaims(claims) {
-  fs.writeFileSync(CLAIMS_FILE, JSON.stringify(claims, null, 2), 'utf8');
+  writeJsonArray(CLAIMS_FILE, claims);
 }
 
 // Helper: Smart Match & Reconciliation Detector

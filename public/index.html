@@ -718,25 +718,15 @@
     }
 
     async function checkAuthSession() {
-      let tabUser;
-      try {
-        tabUser = JSON.parse(sessionStorage.getItem('currentUser') || 'null');
-      } catch (err) {
-        tabUser = null;
-      }
-      if (!tabUser || !['admin', 'student'].includes(tabUser.role) || sessionStorage.getItem('userRole') !== tabUser.role) {
-        clearStoredAuth();
-        renderGuestHeader();
-        return;
-      }
-
       try {
         const res = await fetch('/api/auth/me', { cache: 'no-store', credentials: 'same-origin' });
         if (!res.ok) throw new Error('Unable to verify the current session.');
         const data = await res.json();
 
-        if (data.authenticated && data.user && data.user.id === tabUser.id && data.user.role === tabUser.role) {
+        if (data.authenticated && data.user && ['admin', 'student'].includes(data.user.role)) {
           currentUser = data.user;
+          sessionStorage.setItem('currentUser', JSON.stringify(currentUser));
+          sessionStorage.setItem('userRole', currentUser.role);
           const isAdmin = currentUser.role === 'admin';
           const roleLabel = isAdmin ? 'SAO ADMIN' : 'Student';
           document.getElementById('userNavSlot').innerHTML = `
