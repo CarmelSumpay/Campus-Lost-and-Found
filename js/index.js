@@ -1,9 +1,71 @@
 const STORAGE_KEY = 'cspc_simple_lostfound_v2';
 
+  let currentUser = null;
     let currentFilter = 'all';
     let currentLocationFilter = '';
     let currentPage = 1;
     const itemsPerPage = 6;
+
+    function clearStoredAuth() {
+      ['adminToken', 'currentUser', 'userRole'].forEach(key => {
+        localStorage.removeItem(key);
+        sessionStorage.removeItem(key);
+      });
+    }
+
+    function renderGuestHeader() {
+      currentUser = null;
+      const slot = document.getElementById('userNavSlot');
+      if (slot) slot.innerHTML = '<a href="/login" class="btn btn-primary nav-signin-btn">Sign In</a>';
+    }
+
+    async function checkAuthSession() {
+      let tabUser;
+      try {
+        tabUser = JSON.parse(sessionStorage.getItem('currentUser') || 'null');
+      } catch (error) {
+        tabUser = null;
+      }
+      if (!tabUser || !['admin', 'student'].includes(tabUser.role) || sessionStorage.getItem('userRole') !== tabUser.role) {
+        clearStoredAuth();
+        renderGuestHeader();
+        return;
+      }
+
+      try {
+        const response = await fetch('/api/auth/me', { cache: 'no-store', credentials: 'same-origin' });
+        const data = await response.json();
+        if (!response.ok || !data.authenticated || !data.user || data.user.id !== tabUser.id || data.user.role !== tabUser.role) {
+          clearStoredAuth();
+          renderGuestHeader();
+          return;
+        }
+        currentUser = data.user;
+        document.getElementById('userNavSlot').innerHTML = `
+          <div class="user-pill">
+            <span class="user-name">${currentUser.role === 'admin' ? 'CSPC Administrator' : escapeHtml(currentUser.fullName)}</span>
+            <span class="role-badge">${currentUser.role === 'admin' ? 'SAO ADMIN' : 'Student'}</span>
+            <button type="button" onclick="handleLogout()" class="user-pill-logout">Logout</button>
+          </div>`;
+        renderItems();
+      } catch (error) {
+        clearStoredAuth();
+        renderGuestHeader();
+      }
+    }
+
+    async function handleLogout() {
+      try {
+        const response = await fetch('/api/auth/logout', { method: 'POST', credentials: 'same-origin' });
+        if (!response.ok) throw new Error('Logout request failed.');
+        clearStoredAuth();
+        renderGuestHeader();
+        renderItems();
+        showToast('Signed out successfully.');
+      } catch (error) {
+        showToast('Unable to sign out.');
+      }
+    }
 
     function getItems() {
       const saved = localStorage.getItem(STORAGE_KEY);
@@ -261,9 +323,9 @@ const STORAGE_KEY = 'cspc_simple_lostfound_v2';
               </div>
 
               <div class="card-actions" style="margin-top: 1rem;">
-                <button class="btn-sm btn-qr" onclick="openQrStickerModal(${item.id})">🏷️ QR Sticker</button>
-                <button class="btn-sm btn-outline" style="border-color: rgba(34,197,94,0.4); color: #86efac;" onclick="openAnonymousFinderModal('${escapeHtml(item.refCode)}')">📱 Test Finder Screen</button>
-                <button class="btn-sm btn-del" onclick="deleteItem(${item.id})">Unregister</button>
+                ${currentUser?.role === 'admin' ? `<button class="btn-sm btn-qr" onclick="openQrStickerModal(${item.id})">🏷️ QR Sticker</button>` : ''}
+                ${currentUser?.role === 'admin' ? `<button class="btn-sm btn-outline" style="border-color: rgba(34,197,94,0.4); color: #86efac;" onclick="openAnonymousFinderModal('${escapeHtml(item.refCode)}')">📱 Test Finder Screen</button>` : ''}
+                ${currentUser?.role === 'admin' ? `<button class="btn-sm btn-del" onclick="deleteItem(${item.id})">Unregister</button>` : ''}
               </div>
             </div>
           `;
@@ -333,9 +395,9 @@ const STORAGE_KEY = 'cspc_simple_lostfound_v2';
             </div>
 
             <div class="card-actions">
-              <button class="btn-sm btn-claim" onclick="toggleClaim(${item.id})">${claimBtnText}</button>
-              <button class="btn-sm btn-qr" onclick="openQrStickerModal(${item.id})">🏷️ QR Sticker</button>
-              <button class="btn-sm btn-del" onclick="deleteItem(${item.id})">Remove</button>
+              ${currentUser?.role === 'admin' ? `<button class="btn-sm btn-claim" onclick="toggleClaim(${item.id})">${claimBtnText}</button>` : ''}
+              ${currentUser?.role === 'admin' ? `<button class="btn-sm btn-qr" onclick="openQrStickerModal(${item.id})">🏷️ QR Sticker</button>` : ''}
+              ${currentUser?.role === 'admin' ? `<button class="btn-sm btn-del" onclick="deleteItem(${item.id})">Remove</button>` : ''}
             </div>
           </div>
         `;
@@ -950,6 +1012,7 @@ const STORAGE_KEY = 'cspc_simple_lostfound_v2';
 
     // Initial render
     document.addEventListener('DOMContentLoaded', () => {
+      checkAuthSession();
       renderItems();
       updateNotifBadge();
 

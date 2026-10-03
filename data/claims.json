@@ -1,5 +1,17 @@
 [
   {
+    "id": "claim-b4dc8783-242d-42aa-80bf-77585ccbccad",
+    "itemId": 1790513779895,
+    "itemTitle": "Nalaman",
+    "itemRefCode": "CSPC-LF-2026-017",
+    "claimantId": "usr-1791025541341",
+    "claimantName": "Cazzy Chae",
+    "claimantEmail": "cachae@my.cspc.edu.ph",
+    "proof": "cakjvnadvnakjvn",
+    "status": "pending",
+    "createdAt": "2026-10-03T11:14:01.625Z"
+  },
+  {
     "id": "claim-6a65e14a-a4e7-434c-ad3a-e77846536108",
     "itemId": 1789805142401,
     "itemTitle": "Him",

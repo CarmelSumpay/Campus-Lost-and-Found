@@ -5,26 +5,54 @@ let currentUser = null;
     const itemsPerPage = 6;
     let loadedItems = [];
 
-    async function checkAuthSession() {
-      try {
-        const res = await fetch('/api/auth/me');
-        const data = await res.json();
-        const slot = document.getElementById('userNavSlot');
-        const chipVault = document.getElementById('chipMyBelongings');
+    function clearStoredAuth() {
+      ['adminToken', 'currentUser', 'userRole'].forEach(key => {
+        localStorage.removeItem(key);
+        sessionStorage.removeItem(key);
+      });
+    }
 
-        if (data.authenticated && data.user) {
+    function renderGuestHeader() {
+      currentUser = null;
+      const slot = document.getElementById('userNavSlot');
+      const chipVault = document.getElementById('chipMyBelongings');
+      if (slot) slot.innerHTML = '<a href="/login" class="btn btn-primary nav-signin-btn">Sign In</a>';
+      if (chipVault) chipVault.style.display = 'none';
+    }
+
+    async function checkAuthSession() {
+      let tabUser;
+      try {
+        tabUser = JSON.parse(sessionStorage.getItem('currentUser') || 'null');
+      } catch (err) {
+        tabUser = null;
+      }
+      if (!tabUser || !['admin', 'student'].includes(tabUser.role) || sessionStorage.getItem('userRole') !== tabUser.role) {
+        clearStoredAuth();
+        renderGuestHeader();
+        return;
+      }
+
+      try {
+        const res = await fetch('/api/auth/me', { cache: 'no-store', credentials: 'same-origin' });
+        if (!res.ok) throw new Error('Unable to verify the current session.');
+        const data = await res.json();
+
+        if (data.authenticated && data.user && data.user.id === tabUser.id && data.user.role === tabUser.role) {
           currentUser = data.user;
-          const roleLabel = currentUser.role === 'admin' ? 'SAO Admin' : 'Student';
-          slot.innerHTML = `
+          const isAdmin = currentUser.role === 'admin';
+          const roleLabel = isAdmin ? 'SAO ADMIN' : 'Student';
+          document.getElementById('userNavSlot').innerHTML = `
             <button type="button" id="notifBellBtn" onclick="openNotificationsModal()" class="notif-bell-btn" title="View QR Recovery Alerts">
               🔔 <span id="notifCountBadge" class="notif-badge" style="display:none;">0</span>
             </button>
             <div class="user-pill">
-              <span class="user-name">${escapeHtml(currentUser.fullName)}</span>
+              <span class="user-name">${escapeHtml(isAdmin ? 'CSPC Administrator' : currentUser.fullName)}</span>
               <span class="role-badge">${roleLabel}</span>
               <button type="button" onclick="handleLogout()" class="user-pill-logout" title="Sign out of account">Logout</button>
             </div>
           `;
+          const chipVault = document.getElementById('chipMyBelongings');
           if (chipVault) chipVault.style.display = 'inline-block';
           fetchMyBelongingsCount();
           loadMyNotifications();
@@ -35,12 +63,14 @@ let currentUser = null;
             document.getElementById('itemContact').value = `${currentUser.fullName} (${currentUser.email})`;
           }
         } else {
-          currentUser = null;
-          if (chipVault) chipVault.style.display = 'none';
-          slot.innerHTML = `<a href="/login" class="btn btn-outline nav-signin-btn">Sign In</a>`;
+          clearStoredAuth();
+          renderGuestHeader();
+          fetchAndRenderItems();
         }
       } catch (err) {
-        console.warn('Could not verify session state');
+        clearStoredAuth();
+        renderGuestHeader();
+        fetchAndRenderItems();
       }
     }
 
@@ -52,10 +82,15 @@ let currentUser = null;
     }
     async function executeLogout() {
       try {
-        await fetch('/api/auth/logout', { method: 'POST' });
-        window.location.reload();
+        const response = await fetch('/api/auth/logout', { method: 'POST', credentials: 'same-origin' });
+        if (!response.ok) throw new Error('Logout request failed.');
+        clearStoredAuth();
+        renderGuestHeader();
+        closeLogoutModal();
+        fetchAndRenderItems();
+        showToast('Signed out successfully.');
       } catch (err) {
-        window.location.href = '/login';
+        showToast('Unable to sign out. Please try again.', true);
       }
     }
     function handleLogout() {
@@ -160,6 +195,7 @@ let currentUser = null;
       grid.innerHTML = pageItems.map(item => {
         // Special render for personal preventive registered belongings
         if (item.type === 'registered') {
+          const canManageRegistered = currentUser?.role === 'admin' || item.reportedBy === currentUser?.id;
           return `
             <div class="project-card" id="item-card-${item.id}" style="border-color: rgba(59,130,246,0.45); background: rgba(59,130,246,0.04);">
               <div class="project-card-header">
@@ -188,8 +224,8 @@ let currentUser = null;
               </div>
 
               <div class="card-actions" style="margin-top: 1rem;">
-                <button class="btn-sm btn-qr" onclick="openQrStickerModal(${item.id})">🏷️ QR Sticker</button>
-                <button class="btn-sm btn-outline" style="border-color: rgba(34,197,94,0.4); color: #86efac;" onclick="openAnonymousFinderModal('${escapeHtml(item.refCode)}')">📱 Test Finder Screen</button>
+                ${canManageRegistered ? `<button class="btn-sm btn-qr" onclick="openQrStickerModal(${item.id})">🏷️ QR Sticker</button>` : ''}
+                ${canManageRegistered ? `<button class="btn-sm btn-outline" style="border-color: rgba(34,197,94,0.4); color: #86efac;" onclick="openAnonymousFinderModal('${escapeHtml(item.refCode)}')">📱 Test Finder Screen</button>` : ''}
                 ${currentUser?.role === 'admin' ? `<button class="btn-sm btn-del" onclick="deleteItem(${item.id})">Unregister</button>` : ''}
               </div>
             </div>
@@ -206,6 +242,7 @@ let currentUser = null;
         }
 
         const canManageStatus = currentUser?.role === 'admin';
+        const canGetQrSticker = currentUser?.role === 'admin';
         const canRequestClaim = item.type === 'found' && !item.claimed && (!currentUser || item.reportedBy !== currentUser.id);
         const claimBtnText = item.claimed ? 'Mark Unclaimed' : 'Mark Claimed';
 
@@ -267,7 +304,7 @@ let currentUser = null;
 
             <div class="card-actions">
               ${claimBtnHtml}
-              <button class="btn-sm btn-qr" onclick="openQrStickerModal(${item.id})">🏷️ QR Sticker</button>
+              ${canGetQrSticker ? `<button class="btn-sm btn-qr" onclick="openQrStickerModal(${item.id})">🏷️ QR Sticker</button>` : ''}
               ${delBtnHtml}
             </div>
           </div>
@@ -787,6 +824,8 @@ let currentUser = null;
 
     let targetDeleteId = null;
     let targetClaimId = null;
+    let claimRequestMode = false;
+    let claimSubmissionInProgress = false;
     let lastCreatedItemId = null;
 
     function openReportSuccessModal(refCode, itemId, potentialMatch) {
@@ -868,6 +907,8 @@ let currentUser = null;
       const btnEl = document.getElementById('claimModalBtn');
       const proofLabel = document.querySelector('label[for="claimProofInput"]');
 
+      clearClaimFeedback();
+      document.getElementById('claimantDetailsGroup').style.display = 'none';
       proofInput.value = '';
       proofLabel.textContent = 'Claimant Proof / Verification Answer';
       proofInput.placeholder = 'Enter proof, ID details, or verification answer...';
@@ -912,53 +953,106 @@ let currentUser = null;
       document.getElementById('claimantDetailsGroup').style.display = 'block';
       document.querySelector('label[for="claimProofInput"]').textContent = 'Private ownership details';
       const proofInput = document.getElementById('claimProofInput');
+      clearClaimFeedback();
       proofInput.value = '';
       proofInput.placeholder = 'Describe a mark, contents, or other private identifying detail';
+      proofInput.oninput = clearClaimFeedback;
       document.getElementById('claimantCourseYearInput').value = currentUser.courseYear || currentUser.yearLevel || '';
       document.getElementById('claimantContactInput').value = currentUser.phone || currentUser.contactNumber || '';
       document.getElementById('claimModalBtn').innerText = 'Submit Request';
       document.getElementById('claimConfirmModal').classList.add('open');
     }
 
-    function closeClaimModal() {
+    function closeClaimModal(force = false) {
+      if (claimSubmissionInProgress && !force) return;
       document.getElementById('claimConfirmModal').classList.remove('open');
       document.getElementById('claimantDetailsGroup').style.display = 'none';
+      clearClaimFeedback();
       targetClaimId = null;
       claimRequestMode = false;
     }
 
+    function clearClaimFeedback() {
+      ['claimProofError', 'claimCourseYearError', 'claimModalError'].forEach(id => {
+        const error = document.getElementById(id);
+        if (error) {
+          error.textContent = '';
+          error.style.display = 'none';
+        }
+      });
+      ['claimProofInput', 'claimantCourseYearInput'].forEach(id => {
+        const input = document.getElementById(id);
+        if (input) {
+          input.setAttribute('aria-invalid', 'false');
+          input.style.borderColor = 'rgba(59,130,246,0.25)';
+        }
+      });
+    }
+
+    function showClaimFieldError(inputId, errorId, message) {
+      const input = document.getElementById(inputId);
+      const error = document.getElementById(errorId);
+      input.setAttribute('aria-invalid', 'true');
+      input.style.borderColor = '#f87171';
+      error.textContent = message;
+      error.style.display = 'block';
+      input.focus();
+    }
+
+    function showClaimModalError(message) {
+      const error = document.getElementById('claimModalError');
+      error.textContent = message;
+      error.style.display = 'block';
+    }
+
     async function executeClaimToggle() {
-      if (!targetClaimId) return;
+      if (!targetClaimId || claimSubmissionInProgress) return;
       const id = targetClaimId;
       const proof = document.getElementById('claimProofInput').value.trim();
       const isRequest = claimRequestMode;
       const courseYear = isRequest ? document.getElementById('claimantCourseYearInput').value.trim() : '';
       const contactNumber = isRequest ? document.getElementById('claimantContactInput').value.trim() : '';
-      if (isRequest && (proof.length < 5 || proof.length > 500)) {
-        showToast('Enter ownership details between 5 and 500 characters.', true);
+      clearClaimFeedback();
+      if (isRequest && proof.length < 5) {
+        showClaimFieldError('claimProofInput', 'claimProofError', 'Enter private ownership details (at least 5 characters).');
+        return;
+      }
+      if (isRequest && proof.length > 500) {
+        showClaimFieldError('claimProofInput', 'claimProofError', 'Ownership details must be 500 characters or fewer.');
         return;
       }
       if (isRequest && !courseYear) {
-        showToast('Enter your course and year level.', true);
+        showClaimFieldError('claimantCourseYearInput', 'claimCourseYearError', 'Enter your course and year level.');
         return;
       }
-      closeClaimModal();
 
+      const submitButton = document.getElementById('claimModalBtn');
+      const originalButtonText = submitButton.textContent;
+      claimSubmissionInProgress = true;
+      submitButton.disabled = true;
+      submitButton.setAttribute('aria-busy', 'true');
+      submitButton.textContent = isRequest ? 'Submitting...' : 'Saving...';
       try {
         const response = await fetch(isRequest ? `/api/items/${id}/claim-requests` : `/api/items/${id}/claim`, {
           method: isRequest ? 'POST' : 'PATCH',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ proof, courseYear, contactNumber })
         });
-        const data = await response.json();
+        const data = await response.json().catch(() => ({}));
         if (!response.ok || !data.success) throw new Error(data.message || 'Unable to update item status.');
+        closeClaimModal(true);
         if (!isRequest) {
           fetchStats();
           fetchAndRenderItems();
         }
-        showToast(data.message);
+        showToast(data.message || (isRequest ? 'Claim request submitted for review.' : 'Item status updated.'));
       } catch (error) {
-        showToast(error.message || (isRequest ? 'Failed to submit the claim request.' : 'Failed to update status.'), true);
+        showClaimModalError(error.message || (isRequest ? 'Failed to submit the claim request.' : 'Failed to update status.'));
+      } finally {
+        claimSubmissionInProgress = false;
+        submitButton.disabled = false;
+        submitButton.removeAttribute('aria-busy');
+        submitButton.textContent = originalButtonText;
       }
     }
 
