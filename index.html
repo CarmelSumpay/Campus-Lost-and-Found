@@ -1110,7 +1110,7 @@
       if (!activeCategoryField) return;
       document.getElementById(activeCategoryField).value = value;
       const picker = document.getElementById(`${activeCategoryField}Picker`);
-      picker.innerHTML = `<span class="category-picker-selected-icon">${icon}</span>${value}`;
+      picker.innerHTML = `<svg class="category-picker-selected-icon" aria-hidden="true"><use href="#category-icon-${icon}"></use></svg>${value}`;
       picker.classList.add('selected');
       closeCategoryPicker();
     }
