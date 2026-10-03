@@ -1,0 +1,338 @@
+/* ── Admin Panel ── */
+    .admin-tabs {
+      display: flex;
+      gap: .5rem;
+      margin-bottom: 1.75rem;
+      flex-wrap: wrap;
+    }
+    .admin-tab {
+      padding: .45rem 1.1rem;
+      border-radius: 8px;
+      border: 1.5px solid rgba(59,130,246,0.2);
+      background: transparent;
+      color: var(--text-muted);
+      font-size: .8rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .admin-tab:hover { border-color: rgba(59,130,246,0.5); color: var(--blue-main); }
+    .admin-tab.active {
+      background: rgba(59,130,246,0.12);
+      border-color: var(--blue-main);
+      color: var(--blue-main);
+    }
+
+    /* ── Admin Stats ── */
+    .admin-stats {
+      display: grid;
+      grid-template-columns: repeat(6, minmax(0, 1fr));
+      gap: .75rem;
+      margin-bottom: 1.25rem;
+    }
+    .admin-stats .stat-card { padding: 1rem 1.1rem; border-radius: 8px; gap: .4rem; }
+    .admin-stats .stat-number { font-size: 1.75rem; }
+    .admin-tabs { margin-bottom: 1rem; }
+
+    /* ── Table ── */
+    .admin-table-card { overflow: hidden; border: 1px solid var(--border); border-radius: 14px; }
+    .overflow-x-auto { max-width: 100%; overflow-x: auto; }
+    .admin-table-wrap { overflow-y: hidden; }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: .84rem;
+    }
+    #adminItemsTable { width: 100%; min-width: 1180px; table-layout: fixed; }
+    #adminItemsTable th,
+    #adminItemsTable td {
+      overflow: visible;
+      text-overflow: clip;
+      white-space: normal;
+      word-break: break-word;
+      padding: 12px 10px;
+    }
+    #adminItemsTable .status-cell { overflow: hidden; white-space: nowrap; }
+    #adminItemsTable .status-cell .badge { white-space: nowrap; word-break: normal; }
+    .admin-cell-truncate { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .reporter-contact { color: var(--text-muted); font-size: .72rem; }
+    #adminItemsTable .action-buttons { display: flex; align-items: stretch; gap: .35rem; }
+    #adminItemsTable .actions-cell .action-btn {
+      display: flex;
+      flex: 1 1 0;
+      min-width: 0;
+      min-height: 34px;
+      align-items: center;
+      justify-content: center;
+      padding: .35rem .4rem;
+      line-height: 1.2;
+      text-align: center;
+      white-space: normal;
+    }
+    .admin-pagination {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 1rem;
+      flex-wrap: wrap;
+      width: 100%;
+      padding: .85rem 1rem;
+      border-top: 1px solid var(--border);
+    }
+    .pagination-summary { color: var(--text-muted); font-size: .78rem; }
+    .pagination-controls { display: flex; align-items: center; gap: .35rem; flex-wrap: wrap; }
+    .pagination-button {
+      min-width: 34px;
+      height: 34px;
+      padding: 0 .55rem;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      background: transparent;
+      color: var(--text-muted);
+      font-size: .78rem;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    .pagination-button:hover:not(:disabled),
+    .pagination-button.active { color: var(--blue-main); border-color: var(--blue-main); }
+    .pagination-button:disabled { opacity: .45; cursor: not-allowed; }
+    thead tr {
+      background: rgba(59,130,246,0.06);
+      border-bottom: 1px solid var(--border);
+    }
+    th {
+      text-align: left;
+      padding: .75rem 1rem;
+      font-size: .72rem;
+      font-weight: 700;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+      color: var(--blue-dark);
+      white-space: nowrap;
+    }
+    td {
+      padding: .75rem 1rem;
+      color: var(--text-muted);
+      border-bottom: 1px solid rgba(59,130,246,0.06);
+      vertical-align: middle;
+    }
+    tr:last-child td { border-bottom: none; }
+    tr:hover td { background: rgba(59,130,246,0.03); }
+    .td-title { color: var(--text-main); font-weight: 600; max-width: 200px; }
+    .td-title a { color: inherit; text-decoration: none; }
+    .td-title a:hover { color: var(--blue-main); }
+
+    /* ── Action buttons in table ── */
+    .action-btn {
+      padding: .3rem .65rem;
+      border-radius: 6px;
+      border: 1.5px solid;
+      font-size: .72rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all .2s;
+      background: transparent;
+    }
+    .action-btn-claim {
+      border-color: rgba(34,197,94,.4);
+      color: #4ade80;
+    }
+    .action-btn-claim:hover { background: rgba(34,197,94,.12); }
+    .action-btn-restore {
+      border-color: rgba(59,130,246,.3);
+      color: var(--blue-main);
+    }
+    .action-btn-restore:hover { background: rgba(59,130,246,.08); }
+    .action-btn-delete {
+      border-color: rgba(239,68,68,.35);
+      color: #f87171;
+    }
+    .action-btn-delete:hover { background: rgba(239,68,68,.1); }
+
+    /* ── Claims tab ── */
+    .claim-card {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 1.25rem 1.5rem;
+      margin-bottom: .85rem;
+    }
+    .claim-card-header {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 1rem;
+      margin-bottom: .6rem;
+      flex-wrap: wrap;
+    }
+    .claim-card h3 { font-size: .9rem; font-weight: 800; color: var(--text-main); }
+    .claim-card p  { font-size: .82rem; color: var(--text-muted); line-height: 1.5; }
+    .claim-meta { font-size: .75rem; color: var(--text-muted); margin-top: .5rem; }
+
+    .claim-review-backdrop {
+      position: fixed;
+      inset: 0;
+      z-index: 2100;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 1rem;
+      background: rgba(0,0,0,.76);
+      backdrop-filter: blur(4px);
+    }
+    .claim-review-backdrop.open { display: flex; }
+    .claim-review-dialog {
+      width: min(760px, 100%);
+      max-height: 90vh;
+      overflow-y: auto;
+      padding: 1.4rem;
+      background: #1f1f23;
+      color: var(--text-main);
+      border: 1px solid rgba(59,130,246,.42);
+      border-radius: 12px;
+      box-shadow: 0 18px 60px rgba(0,0,0,.55);
+    }
+    .claim-review-header,
+    .claim-review-actions { display: flex; align-items: center; justify-content: space-between; gap: .75rem; }
+    .claim-review-header { padding-bottom: .85rem; margin-bottom: 1rem; border-bottom: 1px solid var(--border); }
+    .claim-review-header h2 { color: var(--blue-light); font-size: 1.05rem; }
+    .claim-review-close { border: 0; background: transparent; color: var(--text-muted); font-size: 1.35rem; cursor: pointer; }
+    .claim-review-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .75rem; }
+    .claim-review-section { min-width: 0; padding: .9rem; border: 1px solid var(--border); border-radius: 8px; background: rgba(255,255,255,.025); }
+    .claim-review-section h3 { margin-bottom: .65rem; color: var(--blue-light); font-size: .82rem; }
+    .claim-review-section p { margin-top: .35rem; color: var(--text-muted); font-size: .8rem; line-height: 1.5; overflow-wrap: anywhere; }
+    .claim-review-section strong { color: var(--text-main); }
+    .claim-review-section img { display: block; max-width: 100%; max-height: 220px; margin-top: .65rem; border-radius: 6px; object-fit: contain; }
+    .claim-review-input { width: 100%; margin-top: .75rem; padding: .65rem; border: 1px solid var(--border); border-radius: 6px; background: var(--bg-dark2); color: var(--text-main); resize: vertical; }
+    .claim-review-reject { border: 1.5px solid rgba(239,68,68,.4); color: #f87171; background: transparent; }
+    .claim-review-reject:hover { border-color: #f87171; background: rgba(239,68,68,.1); transform: translateY(-2px); }
+    .admin-status-pending { color: #facc15 !important; border-color: rgba(250,204,21,.4) !important; background: rgba(250,204,21,.1) !important; }
+    .admin-status-rejected { color: #f87171 !important; border-color: rgba(248,113,113,.4) !important; background: rgba(248,113,113,.1) !important; }
+    [data-theme='light'] .claim-review-dialog { background: #fff; }
+    [data-theme='light'] .claim-review-section { background: #f8fafc; }
+    [data-theme='light'] .claim-review-input { background: #fff; }
+
+    .claim-status-pending  { color: var(--blue-main); }
+    .claim-status-approved { color: #4ade80; }
+    .claim-status-rejected { color: #f87171; }
+
+    /* ── Search in admin ── */
+    .admin-search-row {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: .75rem;
+      margin-bottom: 1.25rem;
+      align-items: center;
+    }
+    .admin-search-row .form-control {
+      width: 100%;
+      max-width: none;
+      padding-left: .9rem;
+    }
+    .admin-search-wrap { position: relative; min-width: 0; }
+    .admin-search-row #exportBtn { width: 100%; }
+    .admin-search-wrap .search-icon {
+      position: absolute;
+      left: .75rem; top: 50%;
+      transform: translateY(-50%);
+      color: var(--text-muted);
+      pointer-events: none;
+    }
+
+    /* ── Confirm Delete Modal ── */
+    .del-modal-backdrop {
+      position: fixed; inset: 0;
+      background: rgba(0,0,0,.7);
+      z-index: 2000;
+      display: flex; align-items: center; justify-content: center;
+      padding: 1rem;
+      opacity: 0; pointer-events: none;
+      transition: opacity .25s;
+    }
+    .del-modal-backdrop.open { opacity:1; pointer-events:all; }
+    .del-modal {
+      background: #1f1f23;
+      border: 1px solid rgba(239,68,68,.4);
+      border-radius: 16px;
+      padding: 2rem;
+      max-width: 400px;
+      width: 100%;
+      text-align: center;
+    }
+    .del-modal h3 { font-size:1rem; font-weight:800; color:#f87171; margin-bottom:.6rem; }
+    .del-modal p  { font-size:.85rem; color:var(--text-muted); margin-bottom:1.5rem; line-height:1.6; }
+    [data-theme='light'] .del-modal {
+      background: #ffffff;
+      border: 1px solid rgba(239,68,68,.3);
+      box-shadow: 0 10px 40px rgba(0,0,0,0.15);
+    }
+    [data-theme='light'] .del-modal h3 { color: #dc2626; }
+    [data-theme='light'] .del-modal p  { color: #475569; }
+
+    .admin-navbar .navbar-container { max-width: 1280px; }
+    .admin-navbar .nav-links { gap: .8rem; }
+    .admin-navbar .nav-links a { font-size: .78rem; }
+    .admin-navbar .nav-actions { gap: .5rem; }
+    .admin-profile { gap: .5rem; }
+    .admin-profile .user-name { max-width: 150px; }
+    .admin-nav-bell { width: auto; min-width: 72px; padding: 0 .65rem; }
+    #adminPanel .page-section {
+      width: calc(100% - 2rem);
+      max-width: 1600px;
+      margin-inline: auto;
+      padding-inline: 0;
+      box-sizing: border-box;
+    }
+    #adminPanel > .page-header {
+      width: calc(100% - 2rem);
+      max-width: 1600px;
+      margin-inline: auto;
+      padding: 2rem 0 1rem;
+      text-align: left;
+      box-sizing: border-box;
+    }
+    #adminItemsTable { min-width: 1180px; }
+    #adminPanel .page-header h1 {
+      font-size: 2.2rem;
+      font-weight: 800;
+      background: none;
+      color: var(--blue-main);
+      -webkit-text-fill-color: var(--blue-main);
+    }
+    #adminLogoutModal {
+      position: fixed;
+      inset: 0;
+      z-index: 2200;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 1rem;
+      background: rgba(0,0,0,.72);
+    }
+    #adminLogoutModal.open { display: flex; }
+
+    @media (max-width: 560px) {
+      .admin-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .admin-search-row { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      #adminPanel > .page-header { padding-top: 1.5rem; }
+      #adminPanel .page-header h1 { font-size: 1.8rem; }
+      .admin-navbar .navbar-container { flex-wrap: wrap; gap: .35rem; padding: .45rem .75rem; }
+      .admin-navbar .nav-actions { width: 100%; justify-content: flex-end; flex-wrap: wrap; }
+      .admin-navbar .nav-links { top: 100%; }
+      .admin-navbar .nav-logo-short { font-size: .72rem; }
+      .admin-profile .user-name { max-width: 105px; font-size: .7rem; }
+      .admin-profile { gap: .35rem; padding: 0 .5rem; }
+      .claim-review-grid { grid-template-columns: 1fr; }
+      .claim-review-dialog { padding: 1rem; }
+    }
+
+    @media (max-width: 600px) {
+      th, td { padding: .6rem .65rem; font-size: .78rem; }
+    }
+    @media (max-width: 360px) {
+      .admin-stats { grid-template-columns: 1fr; }
+      .admin-search-row { grid-template-columns: 1fr; }
+    }
+    @media (min-width: 561px) and (max-width: 900px) {
+      .admin-stats { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+    }
