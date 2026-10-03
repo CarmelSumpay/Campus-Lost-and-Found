@@ -924,6 +924,16 @@
         <label for="claimProofInput">Claimant Proof / Verification Answer</label>
         <input type="text" id="claimProofInput" maxlength="500" placeholder="Enter proof, ID details, or verification answer..." style="width: 100%; background: rgba(255,255,255,0.05); border: 1.5px solid rgba(59,130,246,0.25); border-radius: 8px; padding: 0.6rem; color: var(--text-main);" />
       </div>
+      <div id="claimantDetailsGroup" style="display:none;margin-bottom:1.25rem;">
+        <div class="input-field" style="margin-bottom:.75rem;">
+          <label for="claimantCourseYearInput">Course &amp; Year</label>
+          <input type="text" id="claimantCourseYearInput" maxlength="100" placeholder="e.g., BS Information Technology, 3rd Year" style="width: 100%; background: rgba(255,255,255,0.05); border: 1.5px solid rgba(59,130,246,0.25); border-radius: 8px; padding: 0.6rem; color: var(--text-main);" />
+        </div>
+        <div class="input-field">
+          <label for="claimantContactInput">Contact Number (Optional)</label>
+          <input type="tel" id="claimantContactInput" maxlength="50" autocomplete="tel" placeholder="Best number to reach you" style="width: 100%; background: rgba(255,255,255,0.05); border: 1.5px solid rgba(59,130,246,0.25); border-radius: 8px; padding: 0.6rem; color: var(--text-main);" />
+        </div>
+      </div>
 
       <div style="display: flex; gap: 0.75rem; justify-content: flex-end;">
         <button type="button" class="btn btn-outline" onclick="closeClaimModal()" style="padding: 0.5rem 1rem;">Cancel</button>
@@ -1123,8 +1133,8 @@
         <div style="display: flex; align-items: center; gap: 0.5rem;">
           <span style="font-size: 1.3rem;">🔔</span>
           <div>
-            <h3 style="font-size: 1.1rem; font-weight: 800; color: #ffffff; margin: 0;">QR Recovery Alerts</h3>
-            <span style="font-size: 0.72rem; color: var(--text-muted);">Direct notifications from students who scanned your item QR stickers</span>
+            <h3 style="font-size: 1.1rem; font-weight: 800; color: #ffffff; margin: 0;">Account Notifications</h3>
+            <span style="font-size: 0.72rem; color: var(--text-muted);">Finder alerts and claim request updates</span>
           </div>
         </div>
         <button onclick="closeNotificationsModal()" style="background:none; border:none; color:var(--text-muted); font-size:1.3rem; cursor:pointer;">&times;</button>
@@ -1809,7 +1819,7 @@
           return;
         }
         if (!data.notifications.length) {
-          list.innerHTML = '<p style="text-align:center;color:#888;padding:24px;">No finder alerts yet. When someone scans your QR sticker, you\'ll see their message here.</p>';
+          list.innerHTML = '<p style="text-align:center;color:#888;padding:24px;">No account notifications yet.</p>';
           return;
         }
 
@@ -1819,11 +1829,13 @@
               <strong>🏷️ ${n.itemTitle || n.refCode}</strong>
               <span class="notif-time">${new Date(n.timestamp).toLocaleString()}</span>
             </div>
-            <p class="notif-msg">📍 <em>${n.locationFound || 'Location not specified'}</em></p>
-            <p class="notif-msg">💬 ${n.message}</p>
-            ${n.finderContact && n.finderContact !== 'Anonymous Student / Finder'
-              ? `<p class="notif-contact">📞 Finder left optional contact: ${n.finderContact}</p>`
-              : '<p class="notif-contact">🔒 Finder remained anonymous</p>'}
+            ${n.notificationType === 'claim'
+              ? `<p class="notif-msg">Claim request update</p><p class="notif-msg">${n.message}</p>`
+              : `<p class="notif-msg">📍 <em>${n.locationFound || 'Location not specified'}</em></p>
+                 <p class="notif-msg">💬 ${n.message}</p>
+                 ${n.finderContact && n.finderContact !== 'Anonymous Student / Finder'
+                   ? `<p class="notif-contact">📞 Finder left optional contact: ${n.finderContact}</p>`
+                   : '<p class="notif-contact">🔒 Finder remained anonymous</p>'}`}
             ${!n.read ? `<button class="btn-mark-read" onclick="markNotifRead('${n.id}', this)">Mark as read</button>` : ''}
           </div>
         `).join('');
@@ -2107,16 +2119,20 @@
       document.getElementById('claimModalSubtitle').innerText = 'Describe identifying details only the rightful owner would know. Only moderators can view your response.';
       document.getElementById('claimVerificationBox').style.display = 'none';
       document.getElementById('claimProofGroup').style.display = 'block';
+      document.getElementById('claimantDetailsGroup').style.display = 'block';
       document.querySelector('label[for="claimProofInput"]').textContent = 'Private ownership details';
       const proofInput = document.getElementById('claimProofInput');
       proofInput.value = '';
       proofInput.placeholder = 'Describe a mark, contents, or other private identifying detail';
+      document.getElementById('claimantCourseYearInput').value = currentUser.courseYear || currentUser.yearLevel || '';
+      document.getElementById('claimantContactInput').value = currentUser.phone || currentUser.contactNumber || '';
       document.getElementById('claimModalBtn').innerText = 'Submit Request';
       document.getElementById('claimConfirmModal').classList.add('open');
     }
 
     function closeClaimModal() {
       document.getElementById('claimConfirmModal').classList.remove('open');
+      document.getElementById('claimantDetailsGroup').style.display = 'none';
       targetClaimId = null;
       claimRequestMode = false;
     }
@@ -2126,8 +2142,14 @@
       const id = targetClaimId;
       const proof = document.getElementById('claimProofInput').value.trim();
       const isRequest = claimRequestMode;
+      const courseYear = isRequest ? document.getElementById('claimantCourseYearInput').value.trim() : '';
+      const contactNumber = isRequest ? document.getElementById('claimantContactInput').value.trim() : '';
       if (isRequest && (proof.length < 5 || proof.length > 500)) {
         showToast('Enter ownership details between 5 and 500 characters.', true);
+        return;
+      }
+      if (isRequest && !courseYear) {
+        showToast('Enter your course and year level.', true);
         return;
       }
       closeClaimModal();
@@ -2136,7 +2158,7 @@
         const response = await fetch(isRequest ? `/api/items/${id}/claim-requests` : `/api/items/${id}/claim`, {
           method: isRequest ? 'POST' : 'PATCH',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ proof })
+          body: JSON.stringify({ proof, courseYear, contactNumber })
         });
         const data = await response.json();
         if (!response.ok || !data.success) throw new Error(data.message || 'Unable to update item status.');

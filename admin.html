@@ -173,6 +173,47 @@
     .claim-card p  { font-size: .82rem; color: var(--text-muted); line-height: 1.5; }
     .claim-meta { font-size: .75rem; color: var(--text-muted); margin-top: .5rem; }
 
+    .claim-review-backdrop {
+      position: fixed;
+      inset: 0;
+      z-index: 2100;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 1rem;
+      background: rgba(0,0,0,.76);
+      backdrop-filter: blur(4px);
+    }
+    .claim-review-backdrop.open { display: flex; }
+    .claim-review-dialog {
+      width: min(760px, 100%);
+      max-height: 90vh;
+      overflow-y: auto;
+      padding: 1.4rem;
+      background: #1f1f23;
+      color: var(--text-main);
+      border: 1px solid rgba(59,130,246,.42);
+      border-radius: 12px;
+      box-shadow: 0 18px 60px rgba(0,0,0,.55);
+    }
+    .claim-review-header,
+    .claim-review-actions { display: flex; align-items: center; justify-content: space-between; gap: .75rem; }
+    .claim-review-header { padding-bottom: .85rem; margin-bottom: 1rem; border-bottom: 1px solid var(--border); }
+    .claim-review-header h2 { color: var(--blue-light); font-size: 1.05rem; }
+    .claim-review-close { border: 0; background: transparent; color: var(--text-muted); font-size: 1.35rem; cursor: pointer; }
+    .claim-review-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .75rem; }
+    .claim-review-section { min-width: 0; padding: .9rem; border: 1px solid var(--border); border-radius: 8px; background: rgba(255,255,255,.025); }
+    .claim-review-section h3 { margin-bottom: .65rem; color: var(--blue-light); font-size: .82rem; }
+    .claim-review-section p { margin-top: .35rem; color: var(--text-muted); font-size: .8rem; line-height: 1.5; overflow-wrap: anywhere; }
+    .claim-review-section strong { color: var(--text-main); }
+    .claim-review-section img { display: block; max-width: 100%; max-height: 220px; margin-top: .65rem; border-radius: 6px; object-fit: contain; }
+    .claim-review-input { width: 100%; margin-top: .75rem; padding: .65rem; border: 1px solid var(--border); border-radius: 6px; background: var(--bg-dark2); color: var(--text-main); resize: vertical; }
+    .admin-status-pending { color: #facc15 !important; border-color: rgba(250,204,21,.4) !important; background: rgba(250,204,21,.1) !important; }
+    .admin-status-rejected { color: #f87171 !important; border-color: rgba(248,113,113,.4) !important; background: rgba(248,113,113,.1) !important; }
+    [data-theme='light'] .claim-review-dialog { background: #fff; }
+    [data-theme='light'] .claim-review-section { background: #f8fafc; }
+    [data-theme='light'] .claim-review-input { background: #fff; }
+
     .claim-status-pending  { color: var(--blue-main); }
     .claim-status-approved { color: #4ade80; }
     .claim-status-rejected { color: #f87171; }
@@ -283,6 +324,8 @@
       .admin-navbar .nav-logo-short { font-size: .72rem; }
       .admin-profile .user-name { max-width: 105px; font-size: .7rem; }
       .admin-profile { gap: .35rem; padding: 0 .5rem; }
+      .claim-review-grid { grid-template-columns: 1fr; }
+      .claim-review-dialog { padding: 1rem; }
     }
 
     @media (max-width: 600px) {
@@ -437,6 +480,22 @@
     </div>
   </div>
 
+  <div class="claim-review-backdrop" id="claimReviewModal" role="dialog" aria-modal="true" aria-labelledby="claimReviewTitle" onclick="if(event.target===this) closeClaimReview()">
+    <div class="claim-review-dialog">
+      <div class="claim-review-header">
+        <h2 id="claimReviewTitle">Verify Claim Request</h2>
+        <button type="button" class="claim-review-close" onclick="closeClaimReview()" aria-label="Close claim review">&times;</button>
+      </div>
+      <div id="claimReviewContent"></div>
+      <div id="claimReviewDecisionFields"></div>
+      <div class="claim-review-actions" style="justify-content:flex-end;margin-top:1rem;flex-wrap:wrap;">
+        <button type="button" class="btn btn-outline" onclick="closeClaimReview()">Close</button>
+        <button type="button" class="action-btn action-btn-delete" id="claimRejectButton" onclick="prepareClaimDecision('rejected')">Reject Claim</button>
+        <button type="button" class="btn btn-primary" id="claimApproveButton" onclick="prepareClaimDecision('approved')">Approve Claim</button>
+      </div>
+    </div>
+  </div>
+
   <!-- Footer -->
   <footer class="site-footer">
     <div class="footer-left">
@@ -454,6 +513,8 @@
     let activeTab = 'items';
     let adminItems = [];
     let claimRequests = [];
+    let adminClaimsSignature = null;
+    let activeClaimReviewId = null;
     let adminRefreshInProgress = false;
     let adminItemsSignature = null;
     let cachedServerItems = [];
@@ -464,7 +525,10 @@
       initNav();
       refreshAdminItems();
       renderClaimsTab();
-      window.setInterval(refreshAdminItems, 5000);
+      window.setInterval(() => {
+        refreshAdminItems();
+        refreshAdminClaims();
+      }, 5000);
 
       document.getElementById('adminClaimsNavLink').addEventListener('click', event => {
         event.preventDefault();
@@ -546,6 +610,25 @@
         }
       } finally {
         adminRefreshInProgress = false;
+      }
+    }
+
+    async function refreshAdminClaims() {
+      try {
+        const response = await fetch('/api/items/claims', { cache: 'no-store' });
+        const data = await response.json();
+        if (!response.ok || !data.success) return;
+        const nextSignature = JSON.stringify(data.claims);
+        if (nextSignature === adminClaimsSignature) return;
+        adminClaimsSignature = nextSignature;
+        claimRequests = data.claims;
+        renderItemsTable();
+        updateAdminNotificationBadge();
+        const claimsStat = document.querySelectorAll('#adminStats .stat-number')[5];
+        if (claimsStat) claimsStat.textContent = claimRequests.filter(claim => claim.status === 'pending').length;
+        if (activeTab === 'claims') renderClaimsTab();
+      } catch (error) {
+        // Keep the last claim snapshot when the API is temporarily unavailable.
       }
     }
 
@@ -641,6 +724,16 @@
         const date = item.type === 'lost' ? formatDate(item.dateLost) : formatDate(item.dateFound);
         const canClaim   = item.status !== 'claimed';
         const canRestore = item.status === 'claimed';
+        const itemClaims = claimRequests.filter(claim => String(claim.itemId) === String(item.id));
+        const pendingClaim = itemClaims.find(claim => claim.status === 'pending');
+        const latestClaim = itemClaims[0];
+        const itemStatus = item.claimed || item.status === 'claimed'
+          ? '<span class="badge badge-claimed">Claimed</span>'
+          : pendingClaim
+            ? '<span class="badge admin-status-pending">Pending Verification</span>'
+            : latestClaim?.status === 'rejected'
+              ? '<span class="badge admin-status-rejected">Rejected · Available</span>'
+              : statusBadge(item.status);
         const rowNumber = startIndex + idx + 1;
         return `
         <tr>
@@ -653,10 +746,10 @@
           <td title="${escHtml(item.location)}">${escHtml(item.location)}</td>
           <td title="${escHtml(`${item.reporterName} ${item.reporterContact}`)}">${escHtml(item.reporterName)}<br><span style="font-size:.72rem;">${escHtml(item.reporterContact)}</span></td>
           <td title="${escHtml(date)}">${date}</td>
-          <td class="status-cell" title="${escHtml(item.status)}">${statusBadge(item.status)}</td>
+          <td class="status-cell" title="${pendingClaim ? 'Pending Verification' : latestClaim?.status === 'rejected' && !item.claimed ? 'Rejected · Available' : escHtml(item.status)}">${itemStatus}</td>
           <td class="actions-cell">
             <div style="display:flex;gap:.35rem;flex-wrap:wrap;">
-              ${canClaim   ? `<button class="action-btn action-btn-claim"   onclick="markClaimed('${item.id}')">Mark Claimed</button>` : ''}
+              ${pendingClaim ? `<button class="action-btn action-btn-claim" onclick="openClaimReview('${pendingClaim.id}')">Review Claim</button>` : ''}
               ${canRestore ? `<button class="action-btn action-btn-restore" onclick="markRestore('${item.id}')">Restore</button>` : ''}
               <button class="action-btn action-btn-delete" onclick="openDeleteModal('${item.id}','${escHtml(item.title)}')">Delete</button>
             </div>
@@ -723,6 +816,8 @@
         const data = await response.json();
         if (!response.ok || !data.success) throw new Error(data.message || 'Unable to load claim requests.');
         claimRequests = data.claims;
+        adminClaimsSignature = JSON.stringify(claimRequests);
+        renderItemsTable();
         updateAdminNotificationBadge();
         const claimsStat = document.querySelectorAll('#adminStats .stat-number')[5];
         if (claimsStat) claimsStat.textContent = claimRequests.filter(claim => claim.status === 'pending').length;
@@ -741,12 +836,9 @@
               </div>
               <span class="badge ${claim.status === 'pending' ? 'badge-lost' : claim.status === 'approved' ? 'badge-found' : 'badge-claimed'}" style="text-transform:capitalize;">${escHtml(claim.status)}</span>
             </div>
-            <p><strong style="color:var(--text-main);">Claimant:</strong> ${escHtml(claim.claimantName)} · ${escHtml(claim.claimantEmail)}</p>
-            <p style="margin-top:.4rem;"><strong style="color:var(--text-main);">Private ownership details:</strong> ${escHtml(claim.proof)}</p>
             ${claim.status === 'pending' ? `
             <div style="display:flex;gap:.5rem;margin-top:.85rem;">
-              <button class="action-btn action-btn-claim" onclick="reviewClaim('${claim.id}','approved')">Approve</button>
-              <button class="action-btn action-btn-delete" onclick="reviewClaim('${claim.id}','rejected')">Reject</button>
+              <button class="action-btn action-btn-claim" onclick="openClaimReview('${claim.id}')">Review Claim</button>
             </div>` : ''}
           </div>`).join('');
       } catch (error) {
@@ -814,15 +906,107 @@
       }
     }
 
-    async function reviewClaim(id, status) {
+    function openClaimReview(id) {
+      const claim = claimRequests.find(entry => entry.id === id);
+      const item = adminItems.find(entry => String(entry.id) === String(claim?.itemId));
+      if (!claim || !item) {
+        showToast('Claim or item details are unavailable. Refresh and try again.', 'error');
+        return;
+      }
+
+      activeClaimReviewId = id;
+      const approveButton = document.getElementById('claimApproveButton');
+      const rejectButton = document.getElementById('claimRejectButton');
+      approveButton.textContent = 'Approve Claim';
+      approveButton.onclick = () => prepareClaimDecision('approved');
+      approveButton.hidden = false;
+      rejectButton.textContent = 'Reject Claim';
+      rejectButton.onclick = () => prepareClaimDecision('rejected');
+      rejectButton.hidden = false;
+
+      document.getElementById('claimReviewTitle').textContent = `Verify Claim Request - ${item.id}`;
+      const proofImage = /^\/uploads\/[a-zA-Z0-9._-]+$/.test(claim.proof || '')
+        ? `<img src="${escHtml(claim.proof)}" alt="Claimant proof image" />`
+        : '';
+      document.getElementById('claimReviewContent').innerHTML = `
+        <div class="claim-review-grid">
+          <section class="claim-review-section">
+            <h3>Claimant Details</h3>
+            <p><strong>Student Name:</strong> ${escHtml(claim.claimantName || 'Not provided')}</p>
+            <p><strong>Student ID Number:</strong> ${escHtml(claim.claimantStudentId || 'Not provided')}</p>
+            <p><strong>Email:</strong> ${escHtml(claim.claimantEmail || 'Not provided')}</p>
+            <p><strong>Contact Number:</strong> ${escHtml(claim.claimantContact || 'Not provided')}</p>
+            <p><strong>Course &amp; Year:</strong> ${escHtml(claim.claimantCourseYear || 'Not provided')}</p>
+            <p><strong>Department:</strong> ${escHtml(claim.claimantDepartment || 'Not provided')}</p>
+          </section>
+          <section class="claim-review-section">
+            <h3>Public Item Details</h3>
+            <p><strong>Item:</strong> ${escHtml(item.title)}</p>
+            <p><strong>Type / Category:</strong> ${escHtml(item.type)} / ${escHtml(item.category)}</p>
+            <p><strong>Location:</strong> ${escHtml(item.location)}</p>
+            <p><strong>Description:</strong> ${escHtml(item.desc || item.description || 'No description provided.')}</p>
+            ${item.photo ? `<img src="${escHtml(item.photo)}" alt="Reported item" />` : ''}
+          </section>
+          <section class="claim-review-section">
+            <h3>Claimant's Proof / Secret Detail</h3>
+            <p>${escHtml(claim.proof || 'No proof detail provided.')}</p>${proofImage}
+          </section>
+          <section class="claim-review-section">
+            <h3>Secret Ownership Detail</h3>
+            <p>${escHtml(item.verification || 'No secret ownership detail was provided.')}</p>
+          </section>
+        </div>`;
+      document.getElementById('claimReviewDecisionFields').innerHTML = '';
+      document.getElementById('claimReviewModal').classList.add('open');
+    }
+
+    function closeClaimReview() {
+      document.getElementById('claimReviewModal').classList.remove('open');
+      activeClaimReviewId = null;
+    }
+
+    function prepareClaimDecision(status) {
+      const fields = document.getElementById('claimReviewDecisionFields');
+      const approveButton = document.getElementById('claimApproveButton');
+      const rejectButton = document.getElementById('claimRejectButton');
+      if (status === 'approved') {
+        fields.innerHTML = `
+          <label for="claimPickupInstructions">Optional pickup instructions</label>
+          <textarea class="claim-review-input" id="claimPickupInstructions" rows="2" maxlength="500" placeholder="Please present your CSPC Student ID at the SAS Office, Room 101"></textarea>`;
+        approveButton.textContent = 'Confirm Approval';
+        approveButton.onclick = () => submitClaimDecision('approved');
+        rejectButton.hidden = true;
+      } else {
+        fields.innerHTML = `
+          <label for="claimRejectionReason">Reason for rejection</label>
+          <textarea class="claim-review-input" id="claimRejectionReason" rows="2" maxlength="500" required placeholder="Proof provided does not match item details"></textarea>`;
+        rejectButton.textContent = 'Submit Rejection';
+        rejectButton.onclick = () => submitClaimDecision('rejected');
+        approveButton.hidden = true;
+      }
+    }
+
+    async function submitClaimDecision(status) {
+      const pickupInstructions = status === 'approved'
+        ? document.getElementById('claimPickupInstructions').value.trim()
+        : '';
+      const rejectionReason = status === 'rejected'
+        ? document.getElementById('claimRejectionReason').value.trim()
+        : '';
+      if (status === 'rejected' && rejectionReason.length < 5) {
+        showToast('Enter a rejection reason of at least 5 characters.', 'error');
+        return;
+      }
+
       try {
-        const response = await fetch(`/api/items/claims/${encodeURIComponent(id)}`, {
+        const response = await fetch(`/api/items/claims/${encodeURIComponent(activeClaimReviewId)}`, {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ status })
+          body: JSON.stringify({ status, pickupInstructions, rejectionReason })
         });
         const data = await response.json();
         if (!response.ok || !data.success) throw new Error(data.message || 'Unable to review claim.');
+        closeClaimReview();
         await renderClaimsTab();
         await refreshAdminItems();
         showToast(data.message);

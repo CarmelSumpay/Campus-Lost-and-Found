@@ -228,7 +228,9 @@
     "status": "active",
     "claimed": false,
     "reportedBy": "guest",
-    "createdAt": "2026-09-19T06:42:55.834Z"
+    "createdAt": "2026-09-19T06:42:55.834Z",
+    "claimedAt": null,
+    "claimantProof": null
   },
   {
     "id": 1789800106999,
