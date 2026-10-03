@@ -104,6 +104,19 @@ test.before(async () => {
       reportedBy: 'reporter-test',
       status: 'active',
       claimed: false
+    },
+    {
+      id: 14,
+      refCode: 'CSPC-LF-2026-014',
+      title: 'Found water bottle',
+      category: 'Others',
+      type: 'found',
+      location: 'Gymnasium',
+      desc: 'Blue bottle with a silver cap.',
+      verification: 'Small star scratched under the base',
+      reportedBy: 'reporter-test',
+      status: 'active',
+      claimed: false
     }
   ]));
 
@@ -130,7 +143,7 @@ test('public item responses exclude private fields', async () => {
   const response = await fetch(`${baseUrl}/api/items`);
   assert.equal(response.status, 200);
   const { items } = await response.json();
-  assert.equal(items.length, 2);
+  assert.equal(items.length, 3);
   for (const field of ['contact', 'verification', 'claimantProof', 'reportedBy', 'notifications', 'ownerEmail']) {
     assert.equal(Object.hasOwn(items[0], field), false, `public response should omit ${field}`);
   }
@@ -185,7 +198,11 @@ test('claim requests are private and require moderator review', async () => {
   const requestResponse = await fetch(`${baseUrl}/api/items/13/claim-requests`, {
     method: 'POST',
     headers: { Cookie: studentCookie, 'Content-Type': 'application/json' },
-    body: JSON.stringify({ proof: 'A small university logo is on the inside cover.' })
+    body: JSON.stringify({
+      proof: 'A small university logo is on the inside cover.',
+      courseYear: 'BS Information Technology, 3rd Year',
+      contactNumber: '09171234567'
+    })
   });
   assert.equal(requestResponse.status, 201);
   const requestData = await requestResponse.json();
@@ -207,16 +224,67 @@ test('claim requests are private and require moderator review', async () => {
   const { claims } = await adminClaimsResponse.json();
   assert.equal(claims.length, 1);
   assert.match(claims[0].proof, /university logo/);
+  assert.equal(claims[0].claimantStudentId, '2026001');
+  assert.equal(claims[0].claimantCourseYear, 'BS Information Technology, 3rd Year');
+  assert.equal(claims[0].claimantContact, '09171234567');
 
   const reviewResponse = await fetch(`${baseUrl}/api/items/claims/${encodeURIComponent(claims[0].id)}`, {
     method: 'PATCH',
     headers: { Cookie: adminCookie, 'Content-Type': 'application/json' },
-    body: JSON.stringify({ status: 'approved' })
+    body: JSON.stringify({ status: 'approved', pickupInstructions: 'Present your CSPC Student ID at SAS Office, Room 101.' })
   });
   assert.equal(reviewResponse.status, 200);
+  assert.equal((await reviewResponse.json()).claim.pickupInstructions, 'Present your CSPC Student ID at SAS Office, Room 101.');
 
   const itemResponse = await fetch(`${baseUrl}/api/items/13`);
   assert.equal((await itemResponse.json()).item.claimed, true);
+
+  const notificationsResponse = await fetch(`${baseUrl}/api/items/my-notifications`, { headers: { Cookie: studentCookie } });
+  const { notifications } = await notificationsResponse.json();
+  assert.equal(notifications[0].notificationType, 'claim');
+  assert.match(notifications[0].message, /Room 101/);
+
+  const readResponse = await fetch(`${baseUrl}/api/items/notifications/${encodeURIComponent(notifications[0].id)}/read`, {
+    method: 'PATCH',
+    headers: { Cookie: studentCookie }
+  });
+  assert.equal(readResponse.status, 200);
+  const readNotificationsResponse = await fetch(`${baseUrl}/api/items/my-notifications`, { headers: { Cookie: studentCookie } });
+  assert.equal((await readNotificationsResponse.json()).unreadCount, 0);
+});
+
+test('rejected claims restore availability and notify the claimant', async () => {
+  const studentCookie = await login('student@my.cspc.edu.ph', studentPassword);
+  const claimResponse = await fetch(`${baseUrl}/api/items/14/claim-requests`, {
+    method: 'POST',
+    headers: { Cookie: studentCookie, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ proof: 'A small star is scratched under the base.' })
+  });
+  assert.equal(claimResponse.status, 201);
+
+  const adminCookie = await login('admin@cspc.edu.ph', adminPassword);
+  const claimsResponse = await fetch(`${baseUrl}/api/items/claims`, { headers: { Cookie: adminCookie } });
+  const { claims } = await claimsResponse.json();
+  const claim = claims.find(entry => String(entry.itemId) === '14');
+  assert.ok(claim);
+
+  const reviewResponse = await fetch(`${baseUrl}/api/items/claims/${encodeURIComponent(claim.id)}`, {
+    method: 'PATCH',
+    headers: { Cookie: adminCookie, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ status: 'rejected', rejectionReason: 'The proof does not match the item.' })
+  });
+  assert.equal(reviewResponse.status, 200);
+  assert.equal((await reviewResponse.json()).claim.rejectionReason, 'The proof does not match the item.');
+
+  const itemResponse = await fetch(`${baseUrl}/api/items/14`);
+  const { item } = await itemResponse.json();
+  assert.equal(item.status, 'active');
+  assert.equal(item.claimed, false);
+
+  const notificationsResponse = await fetch(`${baseUrl}/api/items/my-notifications`, { headers: { Cookie: studentCookie } });
+  const { notifications } = await notificationsResponse.json();
+  assert.equal(notifications[0].notificationType, 'claim');
+  assert.match(notifications[0].message, /does not match/);
 });
 
 test('image upload stores a bounded image file and rejects invalid uploads', async () => {

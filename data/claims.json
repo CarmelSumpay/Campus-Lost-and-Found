@@ -1,0 +1,14 @@
+[
+  {
+    "id": "claim-8da5a60b-e726-4c07-9a3d-07b73636a98b",
+    "itemId": 1790947611879,
+    "itemTitle": "Ballpen",
+    "itemRefCode": "CSPC-LF-2026-017",
+    "claimantId": "usr-1791012522777",
+    "claimantName": "Carmel Sumpay",
+    "claimantEmail": "casumpay@my.cspc.edu.ph",
+    "proof": "name, birthday, color pink",
+    "status": "pending",
+    "createdAt": "2026-10-03T07:46:43.761Z"
+  }
+]
