@@ -5,6 +5,7 @@ const fs = require('fs');
 const path = require('path');
 const bcrypt = require('bcryptjs');
 const { validateUserAuth, sanitizeString } = require('../middleware/validate');
+const { sendRegistrationEmail } = require('../services/email');
 
 const DATA_DIR = process.env.DATA_DIR || path.join(__dirname, '..', 'data');
 const USERS_FILE = path.join(DATA_DIR, 'users.json');
@@ -41,7 +42,7 @@ function ensureAdminAccount() {
   users.push({
     id: 'usr-admin-01',
     email: adminEmail,
-    passwordHash: '$2a$10$D07/af8VBHl4SdhK5Fnhku9fnsUFTkBTCop4S.egyvfO//siDrfm.',
+    passwordHash: '$2a$10$3zpZiqtvddqzByTCH5D88eT6Gapp81L8rfL1Y84Op1RYqFwcgNk42',
     fullName: 'CSPC Administrator',
     studentId: 'N/A',
     role: 'admin',
@@ -99,9 +100,20 @@ router.post('/register', validateUserAuth, async (req, res) => {
     };
     await authenticateSession(req, sessionUser);
 
+    let emailSent = false;
+    try {
+      await sendRegistrationEmail(newUser);
+      emailSent = true;
+    } catch (error) {
+      console.error('Registration confirmation email could not be sent:', error.message);
+    }
+
     res.status(201).json({
       success: true,
-      message: 'Account registered successfully.',
+      message: emailSent
+        ? 'Account registered successfully. A confirmation email has been sent.'
+        : 'Account registered successfully, but the confirmation email could not be sent. Please contact support.',
+      emailSent,
       user: sessionUser
     });
   } catch (error) {

@@ -3,553 +3,11 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>CSPC Lost &amp; Found Management System</title>
+  <title>Back2You</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link rel="stylesheet" href="style.css" />
-  <script>
-    (function() {
-      const saved = localStorage.getItem('cspc_theme') || 'dark';
-      document.documentElement.setAttribute('data-theme', saved);
-    })();
-  </script>
-  <style>
-    /* ── APP ENHANCEMENTS ── */
-    .hero-stats {
-      display: flex;
-      gap: 1.25rem;
-      margin-top: 1.75rem;
-      flex-wrap: wrap;
-    }
-    .stat-box {
-      background: var(--card-bg);
-      border: 1px solid var(--border);
-      border-radius: 12px;
-      padding: 0.9rem 1.4rem;
-      min-width: 110px;
-    }
-    .stat-val {
-      font-size: 1.75rem;
-      font-weight: 900;
-      color: var(--blue-main);
-      line-height: 1;
-    }
-    .stat-lbl {
-      font-size: 0.72rem;
-      font-weight: 600;
-      color: var(--text-muted);
-      letter-spacing: 0.05em;
-      text-transform: uppercase;
-      margin-top: 0.35rem;
-    }
-
-    /* ── SIMPLE REPORT FORM ── */
-    .simple-card {
-      background: var(--card-bg);
-      border: 1px solid var(--border);
-      border-radius: 16px;
-      padding: 2rem;
-      margin-bottom: 3rem;
-      position: relative;
-      z-index: 1;
-    }
-    .form-row {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-      gap: 1rem;
-      margin-bottom: 1rem;
-    }
-    .input-field {
-      display: flex;
-      flex-direction: column;
-      gap: 0.35rem;
-    }
-    .input-field label,
-    .slip-overlay label,
-    .modal label,
-    label {
-      font-size: 0.78rem;
-      font-weight: 700;
-      color: var(--label-color, #93c5fd);
-      letter-spacing: 0.04em;
-    }
-    [data-theme='light'] .input-field label,
-    [data-theme='light'] .slip-overlay label,
-    [data-theme='light'] .modal label,
-    [data-theme='light'] label {
-      color: #1e3a8a !important;
-    }
-    [data-theme='dark'] .input-field label,
-    [data-theme='dark'] .slip-overlay label,
-    [data-theme='dark'] .modal label,
-    [data-theme='dark'] label {
-      color: #93c5fd !important;
-    }
-    [data-theme='light'] .input-field select option {
-      background: #ffffff !important;
-      color: #0f172a !important;
-    }
-    .input-field input,
-    .input-field select,
-    .input-field textarea {
-      background: rgba(255, 255, 255, 0.05);
-      border: 1.5px solid rgba(59, 130, 246, 0.22);
-      border-radius: 8px;
-      padding: 0.65rem 0.85rem;
-      color: var(--text-main);
-      font-size: 0.88rem;
-      outline: none;
-      transition: border-color 0.2s;
-      width: 100%;
-    }
-    .input-field input:focus,
-    .input-field select:focus,
-    .input-field textarea:focus {
-      border-color: var(--blue-main);
-    }
-    .input-field select optgroup {
-      background: #18181b;
-      color: #3b82f6;
-      font-weight: 800;
-      font-style: normal;
-      font-size: 0.88rem;
-      padding: 0.4rem 0.2rem;
-    }
-    .input-field select option {
-      background: #27272a;
-      color: #f8fafc;
-      font-weight: 500;
-      padding: 0.35rem;
-    }
-    .input-field textarea {
-      resize: vertical;
-      min-height: 80px;
-    }
-
-    /* Type radio buttons */
-    .type-switcher {
-      display: flex;
-      gap: 0.75rem;
-      margin-top: 0.25rem;
-    }
-    .type-option {
-      flex: 1;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      padding: 0.65rem 1rem;
-      border: 1.5px solid rgba(59, 130, 246, 0.25);
-      border-radius: 8px;
-      cursor: pointer;
-      font-size: 0.84rem;
-      font-weight: 700;
-      color: var(--text-muted);
-      transition: all 0.2s;
-    }
-    .type-option input { display: none; }
-    .type-option.active-lost {
-      border-color: #ef4444;
-      background: rgba(239, 68, 68, 0.15);
-      color: #fca5a5;
-    }
-    .type-option.active-found {
-      border-color: #22c55e;
-      background: rgba(34, 197, 94, 0.15);
-      color: #86efac;
-    }
-
-    /* ── SEARCH & FILTER CONTROLS ── */
-    .filter-row {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 0.75rem;
-      align-items: center;
-      justify-content: space-between;
-      margin-bottom: 1rem;
-    }
-    .search-box {
-      flex: 1;
-      min-width: 240px;
-    }
-    .search-box input {
-      width: 100%;
-      background: rgba(255, 255, 255, 0.05);
-      border: 1.5px solid rgba(59, 130, 246, 0.22);
-      border-radius: 8px;
-      padding: 0.6rem 0.9rem;
-      color: var(--text-main);
-      font-size: 0.88rem;
-      outline: none;
-    }
-    .search-box input:focus {
-      border-color: var(--blue-main);
-    }
-    .filter-chips {
-      display: flex;
-      gap: 0.4rem;
-      flex-wrap: wrap;
-    }
-    .chip {
-      background: rgba(59, 130, 246, 0.07);
-      border: 1px solid rgba(59, 130, 246, 0.3);
-      color: var(--text-muted);
-      border-radius: 6px;
-      padding: 0.35rem 0.75rem;
-      font-size: 0.76rem;
-      font-weight: 700;
-      cursor: pointer;
-      transition: all 0.2s;
-    }
-    .chip:hover, .chip.active {
-      border-color: var(--blue-main);
-      color: var(--blue-main);
-      background: rgba(59, 130, 246, 0.18);
-    }
-
-    /* ── ITEM CARDS ── */
-    .item-badge {
-      display: inline-block;
-      padding: 0.2rem 0.5rem;
-      border-radius: 5px;
-      font-size: 0.68rem;
-      font-weight: 800;
-      letter-spacing: 0.06em;
-      text-transform: uppercase;
-    }
-    .badge-lost {
-      background: rgba(239, 68, 68, 0.18);
-      color: #fca5a5;
-      border: 1px solid rgba(239, 68, 68, 0.4);
-    }
-    .badge-found {
-      background: rgba(34, 197, 94, 0.18);
-      color: #86efac;
-      border: 1px solid rgba(34, 197, 94, 0.4);
-    }
-    .badge-claimed {
-      background: rgba(59, 130, 246, 0.18);
-      color: var(--blue-light);
-      border: 1px solid rgba(59, 130, 246, 0.4);
-    }
-
-    .card-meta-line {
-      font-size: 0.78rem;
-      color: var(--text-muted);
-      display: flex;
-      flex-direction: column;
-      gap: 0.25rem;
-      margin: 0.35rem 0;
-      padding: 0.5rem 0;
-      border-top: 1px solid rgba(59, 130, 246, 0.08);
-      border-bottom: 1px solid rgba(59, 130, 246, 0.08);
-    }
-    .card-actions {
-      display: flex;
-      gap: 0.5rem;
-      margin-top: auto;
-      padding-top: 0.5rem;
-      flex-wrap: wrap;
-    }
-    .btn-sm {
-      padding: 0.35rem 0.65rem;
-      font-size: 0.72rem;
-      font-weight: 700;
-      border-radius: 6px;
-      cursor: pointer;
-      border: 1px solid;
-      background: transparent;
-      transition: all 0.2s;
-    }
-    .btn-claim {
-      border-color: rgba(34, 197, 94, 0.4);
-      color: #86efac;
-    }
-    .btn-claim:hover {
-      background: rgba(34, 197, 94, 0.15);
-    }
-    .btn-del {
-      border-color: rgba(239, 68, 68, 0.35);
-      color: #fca5a5;
-    }
-    .btn-del:hover {
-      background: rgba(239, 68, 68, 0.15);
-    }
-    .btn-qr {
-      border-color: rgba(59, 130, 246, 0.4);
-      color: var(--blue-light);
-      display: inline-flex;
-      align-items: center;
-      gap: 0.35rem;
-    }
-    .btn-qr:hover {
-      background: rgba(59, 130, 246, 0.15);
-      border-color: var(--blue-main);
-    }
-
-    .ref-code {
-      font-family: monospace;
-      font-size: 0.68rem;
-      font-weight: 700;
-      color: var(--text-muted);
-      letter-spacing: 0.05em;
-    }
-
-    .match-banner {
-      background: rgba(59, 130, 246, 0.1);
-      border: 1px dashed rgba(59, 130, 246, 0.45);
-      border-radius: 8px;
-      padding: 0.55rem 0.75rem;
-      margin: 0.5rem 0;
-      font-size: 0.75rem;
-      color: var(--blue-light);
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      gap: 0.5rem;
-    }
-    .btn-match-qr {
-      background: var(--blue-main);
-      color: #ffffff;
-      border: none;
-      border-radius: 6px;
-      padding: 0.3rem 0.65rem;
-      font-size: 0.72rem;
-      font-weight: 800;
-      cursor: pointer;
-      display: inline-flex;
-      align-items: center;
-      gap: 0.3rem;
-      transition: background 0.2s, transform 0.15s;
-    }
-    .btn-match-qr:hover {
-      background: #60a5fa;
-      transform: translateY(-1px);
-    }
-    .notif-item {
-      background: rgba(255, 255, 255, 0.04);
-      border: 1px solid rgba(255, 255, 255, 0.1);
-      border-radius: 10px;
-      padding: 0.9rem;
-      position: relative;
-      transition: border-color 0.2s;
-    }
-    .notif-item.unread {
-      background: rgba(59, 130, 246, 0.06);
-      border-color: rgba(59, 130, 246, 0.35);
-    }
-    .notif-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 0.4rem;
-      font-size: 0.85rem;
-      color: #ffffff;
-    }
-    .notif-time {
-      font-size: 0.7rem;
-      color: var(--text-muted);
-    }
-    .notif-msg {
-      font-size: 0.8rem;
-      color: #e2e8f0;
-      margin: 0.25rem 0;
-      line-height: 1.4;
-    }
-    .notif-contact {
-      font-size: 0.75rem;
-      color: #86efac;
-      margin: 0.4rem 0 0;
-    }
-    .btn-mark-read {
-      background: none;
-      border: 1px solid rgba(59, 130, 246, 0.3);
-      color: var(--blue-light);
-      border-radius: 6px;
-      padding: 0.2rem 0.5rem;
-      font-size: 0.7rem;
-      cursor: pointer;
-      margin-top: 0.5rem;
-    }
-    .btn-mark-read:hover {
-      background: rgba(59, 130, 246, 0.15);
-      border-color: var(--blue-main);
-    }
-    .badge-registered {
-      background: rgba(59, 130, 246, 0.15);
-      color: #93c5fd;
-      border: 1px solid rgba(59, 130, 246, 0.35);
-    }
-    .chip-my-vault {
-      background: rgba(59, 130, 246, 0.12) !important;
-      border-color: rgba(59, 130, 246, 0.4) !important;
-      color: #bfdbfe !important;
-    }
-    .chip-my-vault.active {
-      background: #2563eb !important;
-      color: #ffffff !important;
-      border-color: #2563eb !important;
-    }
-
-    .hotspots-row {
-      display: flex;
-      align-items: center;
-      gap: 0.75rem;
-      flex-wrap: wrap;
-      margin-bottom: 1.25rem;
-      font-size: 0.76rem;
-      color: var(--text-muted);
-    }
-    .location-filter-wrap {
-      position: relative;
-      flex: 1 1 420px;
-      min-width: 200px;
-    }
-    .location-filter-select {
-      width: 100%;
-      appearance: none;
-      -webkit-appearance: none;
-      -moz-appearance: none;
-      background: rgba(255, 255, 255, 0.04);
-      border: 1px solid rgba(59, 130, 246, 0.18);
-      border-radius: 12px;
-      padding: 0.7rem 2.75rem 0.7rem 0.9rem;
-      font-size: 0.78rem;
-      font-weight: 600;
-      color: var(--text-main);
-      cursor: pointer;
-      outline: none;
-      transition: border-color 0.2s, box-shadow 0.2s;
-      background-image: linear-gradient(45deg, transparent 50%, var(--blue-light) 50%), linear-gradient(135deg, var(--blue-light) 50%, transparent 50%);
-      background-position: calc(100% - 18px) calc(50% - 2px), calc(100% - 12px) calc(50% - 2px);
-      background-size: 6px 6px, 6px 6px;
-      background-repeat: no-repeat;
-    }
-    .location-filter-select:focus {
-      border-color: var(--blue-main);
-      box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
-    }
-    .location-filter-select option {
-      background: #0f172a;
-      color: #f8fafc;
-    }
-    [data-theme='light'] .location-filter-select option {
-      background: #ffffff;
-      color: #0f172a;
-    }
-    .hotspots-row label {
-      font-weight: 700;
-      color: var(--blue-dark);
-      text-transform: uppercase;
-      letter-spacing: 0.05em;
-      margin-right: 0.1rem;
-    }
-
-
-    /* Slip Modal */
-    .slip-overlay {
-      position: fixed;
-      inset: 0;
-      background: rgba(0, 0, 0, 0.78);
-      backdrop-filter: blur(5px);
-      z-index: 1000;
-      display: none;
-      align-items: center;
-      justify-content: center;
-      padding: 1rem;
-    }
-    .slip-overlay.open {
-      display: flex;
-    }
-    .slip-box {
-      background: #ffffff;
-      color: #18181b;
-      border-radius: 12px;
-      max-width: 540px;
-      width: 100%;
-      padding: 2rem;
-      position: relative;
-      box-shadow: 0 10px 40px rgba(0,0,0,0.5);
-      max-height: 90vh;
-      overflow-y: auto;
-    }
-    .slip-table {
-      width: 100%;
-      margin: 1.2rem 0;
-      border-collapse: collapse;
-      font-size: 0.84rem;
-    }
-    .slip-table td {
-      padding: 0.45rem 0.5rem;
-      border-bottom: 1px solid #e2e8f0;
-      color: #1e293b;
-    }
-    .slip-table td:first-child {
-      font-weight: 700;
-      width: 35%;
-      color: #475569;
-    }
-    .slip-signatures {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 1.5rem;
-      margin-top: 1.8rem;
-      padding-top: 1rem;
-      border-top: 1px dashed #cbd5e1;
-      font-size: 0.75rem;
-      color: #64748b;
-      text-align: center;
-    }
-    .sig-line {
-      border-top: 1px solid #94a3b8;
-      margin-top: 2.2rem;
-      padding-top: 0.25rem;
-    }
-
-    @media print {
-      body * {
-        visibility: hidden !important;
-      }
-      #qrPrintArea, #qrPrintArea *, #matchPrintArea, #matchPrintArea * {
-        visibility: visible !important;
-      }
-      #qrPrintArea, #matchPrintArea {
-        position: fixed;
-        left: 50%;
-        top: 30px;
-        transform: translateX(-50%);
-        width: 320px;
-        margin: 0 auto;
-        padding: 20px;
-        background: #ffffff !important;
-        color: #000000 !important;
-        border: 2px dashed #000000 !important;
-        box-shadow: none !important;
-      }
-      .no-print {
-        display: none !important;
-      }
-    }
-
-    /* Toast alert */
-    .toast {
-      position: fixed;
-      bottom: 2rem;
-      right: 2rem;
-      background: #27272a;
-      border: 1px solid var(--blue-main);
-      color: var(--text-main);
-      padding: 0.8rem 1.25rem;
-      border-radius: 8px;
-      font-size: 0.85rem;
-      font-weight: 600;
-      z-index: 999;
-      box-shadow: 0 4px 20px rgba(0,0,0,0.5);
-      animation: fadeIn 0.3s;
-    }
-    @keyframes fadeIn {
-      from { opacity: 0; transform: translateY(8px); }
-      to { opacity: 1; transform: translateY(0); }
-    }
-  </style>
+  <link rel="stylesheet" href="/css/styles.css" />
+  <link rel="stylesheet" href="/css/home.css" />
+  <script src="/js/main.js"></script>
 </head>
 <body>
 
@@ -558,22 +16,23 @@
     <div class="navbar-container">
       <a href="/" class="nav-logo">
         <img src="cspc-logo.png" alt="CSPC Logo" />
-        <span class="nav-logo-full">CSPC Lost &amp; Found Management System</span>
-        <span class="nav-logo-short">CSPC Lost &amp; Found</span>
+        <span class="nav-logo-full">Back2You</span>
+        <span class="nav-logo-short">Back2You</span>
       </a>
       <div class="nav-links" id="navLinks">
         <a href="#items">Items</a>
         <a href="#report">Report Item</a>
-        <button type="button" class="btn btn-outline nav-btn-action" onclick="handleOpenRegisterBelonging()">🏷️ Register Belonging</button>
+        <button type="button" class="btn btn-outline nav-btn-action nav-register-btn nav-register-mobile" onclick="handleOpenRegisterBelonging()">Register Belonging</button>
       </div>
       <div class="nav-actions">
+        <button type="button" class="btn btn-outline nav-btn-action nav-register-btn" onclick="handleOpenRegisterBelonging()">Register Belonging</button>
         <button type="button" class="theme-toggle" id="themeToggleBtn" onclick="toggleTheme()" title="Toggle Theme" aria-label="Toggle theme">
           <span class="theme-toggle-icon">🌙</span>
         </button>
         <div id="userNavSlot" class="user-nav-slot">
-          <a href="/login" class="btn btn-outline nav-signin-btn">Sign In</a>
+          <a href="/login" class="btn btn-primary nav-signin-btn">Sign In</a>
         </div>
-        <button class="menu-toggle" id="menuToggle" aria-label="Toggle navigation menu" onclick="toggleMobileNav(event)">
+        <button class="menu-toggle" id="menuToggle" aria-label="Toggle navigation menu">
           <span></span><span></span><span></span>
         </button>
       </div>
@@ -584,33 +43,33 @@
   <header class="hero-section" style="min-height: auto; padding: 4rem 1.5rem 3rem; align-items: center;">
     <div class="hero-text">
       <p class="hero-greeting">Camarines Sur Polytechnic Colleges</p>
-      <h1 class="hero-name">Lost &amp; Found Management System</h1>
+      <h1 class="hero-name">Back2You</h1>
       
       <!-- Quick Stats -->
       <div class="hero-stats">
-        <div class="stat-box">
-          <div class="stat-val" id="statTotal">0</div>
-          <div class="stat-lbl">Total Items</div>
-        </div>
-        <div class="stat-box">
-          <div class="stat-val" id="statLost" style="color: #f87171;">0</div>
-          <div class="stat-lbl">Lost</div>
-        </div>
-        <div class="stat-box">
-          <div class="stat-val" id="statFound" style="color: #4ade80;">0</div>
-          <div class="stat-lbl">Found</div>
-        </div>
-        <div class="stat-box">
-          <div class="stat-val" id="statClaimed" style="color: var(--blue-main);">0</div>
-          <div class="stat-lbl">Claimed</div>
-        </div>
+        <button type="button" class="stat-box active" data-filter="all" aria-label="Show all items" aria-pressed="true" onclick="setFilter('all', this)">
+          <span class="stat-val" id="statTotal">0</span>
+          <span class="stat-lbl">Total Items</span>
+        </button>
+        <button type="button" class="stat-box" data-filter="lost" aria-label="Show lost items" aria-pressed="false" onclick="setFilter('lost', this)">
+          <span class="stat-val" id="statLost" style="color: #f87171;">0</span>
+          <span class="stat-lbl">Lost</span>
+        </button>
+        <button type="button" class="stat-box" data-filter="found" aria-label="Show found items" aria-pressed="false" onclick="setFilter('found', this)">
+          <span class="stat-val" id="statFound" style="color: #4ade80;">0</span>
+          <span class="stat-lbl">Found</span>
+        </button>
+        <button type="button" class="stat-box" data-filter="claimed" aria-label="Show claimed items" aria-pressed="false" onclick="setFilter('claimed', this)">
+          <span class="stat-val" id="statClaimed" style="color: var(--blue-main);">0</span>
+          <span class="stat-lbl">Claimed</span>
+        </button>
       </div>
     </div>
 
     <!-- CSPC Logo in Hero -->
     <div class="hero-avatar" style="flex-shrink: 0; text-align: center;">
-      <div style="width: 150px; height: 150px; border-radius: 50%; background: rgba(255,255,255,0.06); border: 2px solid var(--border); display: flex; align-items: center; justify-content: center; box-shadow: 0 0 35px rgba(59, 130, 246, 0.25); margin: 0 auto; backdrop-filter: blur(8px);">
-        <img src="cspc-logo.png" alt="CSPC Official Logo" style="width: 125px; height: 125px; object-fit: contain; border-radius: 50%;" />
+      <div class="hero-seal">
+        <img src="cspc-logo.png" alt="CSPC Official Logo" />
       </div>
     </div>
   </header>
@@ -627,11 +86,11 @@
         <input type="text" id="searchInput" placeholder="Search by item name, reference code, location, or details..." oninput="fetchAndRenderItems()" />
       </div>
       <div class="filter-chips">
-        <button class="chip active" onclick="setFilter('all', this)">All</button>
-        <button class="chip" onclick="setFilter('lost', this)">Lost</button>
-        <button class="chip" onclick="setFilter('found', this)">Found</button>
-        <button class="chip" onclick="setFilter('claimed', this)">Claimed</button>
-        <button class="chip chip-my-vault" id="chipMyBelongings" onclick="setFilter('registered', this)" style="display: none;">🔒 My Belongings (<span id="myBelongingsCount">0</span>)</button>
+        <button class="chip active" data-filter="all" onclick="setFilter('all', this)">All</button>
+        <button class="chip" data-filter="lost" onclick="setFilter('lost', this)">Lost</button>
+        <button class="chip" data-filter="found" onclick="setFilter('found', this)">Found</button>
+        <button class="chip" data-filter="claimed" onclick="setFilter('claimed', this)">Claimed</button>
+        <button class="chip chip-my-vault" data-filter="registered" id="chipMyBelongings" onclick="setFilter('registered', this)" style="display: none;">🔒 My Belongings (<span id="myBelongingsCount">0</span>)</button>
       </div>
     </div>
 
@@ -687,7 +146,7 @@
         <div class="form-row">
           <div class="input-field">
             <label for="itemTitle">Item Name *</label>
-            <input type="text" id="itemTitle" placeholder="e.g., Casio Scientific Calculator" required minlength="3" maxlength="100" />
+            <input type="text" id="itemTitle" placeholder="e.g., Cellphone" required minlength="3" maxlength="100" />
           </div>
           <div class="input-field">
             <label for="itemCategory">Category *</label>
@@ -765,14 +224,14 @@
           </div>
           <div class="input-field">
             <label for="itemLocationDetails">Room or Specific Spot (Optional)</label>
-            <input type="text" id="itemLocationDetails" placeholder="e.g., Room 302, 2nd floor lobby, Study table 4" />
+            <input type="text" id="itemLocationDetails" placeholder="e.g., Room 101" />
           </div>
         </div>
 
         <div class="form-row">
           <div class="input-field" style="grid-column: 1 / -1;">
             <label for="itemContact">Contact Information (Name &amp; Phone/Email) *</label>
-            <input type="text" id="itemContact" placeholder="e.g., Juan Dela Cruz - 09123456789" required />
+            <input type="text" id="itemContact" placeholder="e.g., Juan Dela Cruz - juan.delacruz@my.cspc.edu.ph" required />
           </div>
         </div>
 
@@ -784,7 +243,12 @@
         <div class="input-field" style="margin-bottom: 1rem;">
           <label for="itemPhotoInput">Upload Photo (Optional)</label>
           <div class="photo-upload-area" role="button" tabindex="0" onclick="document.getElementById('itemPhotoInput').click()" onkeydown="if(event.key === 'Enter' || event.key === ' ') { event.preventDefault(); document.getElementById('itemPhotoInput').click(); }" ondragover="event.preventDefault(); this.classList.add('dragover')" ondragleave="this.classList.remove('dragover')" ondrop="handlePhotoDrop(event)">
-            <div class="photo-upload-icon" aria-hidden="true"><span>☁</span><strong>↑</strong></div>
+            <div class="photo-upload-icon" aria-hidden="true">
+              <svg viewBox="0 0 40 32" focusable="false">
+                <path d="M11 27h19a9 9 0 0 0 1-18A13 13 0 0 0 7 12a8 8 0 0 0 4 15z" fill="currentColor"/>
+                <path d="M20 23V11m-5 5 5-5 5 5" fill="none" stroke="#fff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+            </div>
             <strong>Click or drag and drop image here</strong>
             <small>PNG, JPG, or WEBP up to 5MB</small>
           </div>
@@ -922,9 +386,22 @@
 
       <div class="input-field" id="claimProofGroup" style="margin-bottom: 1.25rem;">
         <label for="claimProofInput">Claimant Proof / Verification Answer</label>
-        <input type="text" id="claimProofInput" maxlength="500" placeholder="Enter proof, ID details, or verification answer..." style="width: 100%; background: rgba(255,255,255,0.05); border: 1.5px solid rgba(59,130,246,0.25); border-radius: 8px; padding: 0.6rem; color: var(--text-main);" />
+        <input type="text" id="claimProofInput" maxlength="500" aria-invalid="false" aria-describedby="claimProofError" placeholder="Enter proof, ID details, or verification answer..." style="width: 100%; background: rgba(255,255,255,0.05); border: 1.5px solid rgba(59,130,246,0.25); border-radius: 8px; padding: 0.6rem; color: var(--text-main);" />
+        <p id="claimProofError" style="display:none;color:#f87171;font-size:.76rem;margin-top:.35rem;" role="alert"></p>
+      </div>
+      <div id="claimantDetailsGroup" style="display:none;margin-bottom:1.25rem;">
+        <div class="input-field" style="margin-bottom:.75rem;">
+          <label for="claimantCourseYearInput">Course &amp; Year</label>
+          <input type="text" id="claimantCourseYearInput" maxlength="100" aria-invalid="false" aria-describedby="claimCourseYearError" placeholder="e.g., BS Information Technology, 3rd Year" style="width: 100%; background: rgba(255,255,255,0.05); border: 1.5px solid rgba(59,130,246,0.25); border-radius: 8px; padding: 0.6rem; color: var(--text-main);" />
+          <p id="claimCourseYearError" style="display:none;color:#f87171;font-size:.76rem;margin-top:.35rem;" role="alert"></p>
+        </div>
+        <div class="input-field">
+          <label for="claimantContactInput">Contact Number (Optional)</label>
+          <input type="tel" id="claimantContactInput" maxlength="50" autocomplete="tel" placeholder="Best number to reach you" style="width: 100%; background: rgba(255,255,255,0.05); border: 1.5px solid rgba(59,130,246,0.25); border-radius: 8px; padding: 0.6rem; color: var(--text-main);" />
+        </div>
       </div>
 
+      <div id="claimModalError" role="alert" aria-live="assertive" style="display:none;background:rgba(239,68,68,.12);border:1px solid rgba(239,68,68,.35);border-radius:6px;color:#fca5a5;font-size:.8rem;line-height:1.45;padding:.65rem .75rem;margin-bottom:1rem;"></div>
       <div style="display: flex; gap: 0.75rem; justify-content: flex-end;">
         <button type="button" class="btn btn-outline" onclick="closeClaimModal()" style="padding: 0.5rem 1rem;">Cancel</button>
         <button type="button" class="btn btn-primary" onclick="executeClaimToggle()" style="padding: 0.5rem 1.25rem;" id="claimModalBtn">Confirm Claim</button>
@@ -963,7 +440,7 @@
 
       <div style="display: flex; gap: 0.75rem; justify-content: center; flex-wrap: wrap;">
         <button type="button" class="btn btn-outline" onclick="closeReportSuccessModal()">Close</button>
-        <button type="button" class="btn btn-primary" id="successPrintBtn" onclick="openQrFromSuccessModal()">🏷️ Get QR Sticker</button>
+        <button type="button" class="btn btn-primary" id="successPrintBtn" onclick="openQrFromSuccessModal()">Get QR Sticker</button>
       </div>
     </div>
   </div>
@@ -1021,7 +498,7 @@
 
         <div style="display: flex; gap: 0.75rem; justify-content: flex-end;">
           <button type="button" class="btn btn-outline" onclick="closeRegisterBelongingModal()">Cancel</button>
-          <button type="submit" class="btn btn-primary" id="regSubmitBtn">✨ Register &amp; Generate QR Sticker</button>
+          <button type="submit" class="btn btn-primary" id="regSubmitBtn">Register &amp; Generate QR Sticker</button>
         </div>
       </form>
     </div>
@@ -1033,18 +510,31 @@
         <div><span class="category-picker-eyebrow">Item classification</span><h2 id="categoryPickerTitle">Select a Category</h2></div>
         <button type="button" class="category-picker-close" onclick="closeCategoryPicker()" aria-label="Close category picker">&times;</button>
       </div>
+      <svg class="category-icon-defs" aria-hidden="true" focusable="false">
+        <symbol id="category-icon-electronics" viewBox="0 0 24 24"><rect x="6" y="2.5" width="12" height="19" rx="2"/><path d="M10 5h4M11 18.5h2"/></symbol>
+        <symbol id="category-icon-bottle" viewBox="0 0 24 24"><path d="M9 3h6v3l2 2v12a2 2 0 0 1-2 2H9a2 2 0 0 1-2-2V8l2-2z"/><path d="M9 10h8M9 14h8"/></symbol>
+        <symbol id="category-icon-clothing" viewBox="0 0 24 24"><path d="m8 4 4 2 4-2 5 3-3 5-2-1v10H8V11l-2 1-3-5z"/><path d="M9 4a3 3 0 0 0 6 0"/></symbol>
+        <symbol id="category-icon-books" viewBox="0 0 24 24"><path d="M4 4.5A2.5 2.5 0 0 1 6.5 2H20v17H6.5A2.5 2.5 0 0 0 4 21.5z"/><path d="M4 5v16.5M8 6h8M8 10h8"/></symbol>
+        <symbol id="category-icon-bag" viewBox="0 0 24 24"><rect x="4" y="7" width="16" height="14" rx="2"/><path d="M9 7V5a3 3 0 0 1 6 0v2M4 12h16M10 12v2h4v-2"/></symbol>
+        <symbol id="category-icon-key" viewBox="0 0 24 24"><circle cx="8" cy="10" r="5"/><path d="m12 13 8 8m-3-3 2-2m-5-1 2-2"/></symbol>
+        <symbol id="category-icon-jewelry" viewBox="0 0 24 24"><path d="m3 9 4-5h10l4 5-9 12zM3 9h18M7 4l5 17 5-17M7 9l5-5 5 5"/></symbol>
+        <symbol id="category-icon-sports" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="m12 7 4 3-1.5 5h-5L8 10zM8 10l-4-1m4 1-2 6m8-6 5-1m-3 6 3 4m-11-3 4 5"/></symbol>
+        <symbol id="category-icon-school" viewBox="0 0 24 24"><path d="m4 17 11-11 4 4L8 21H4zM13 8l4 4M4 17l4 4M17 3l4 4"/></symbol>
+        <symbol id="category-icon-id" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="10" r="2.5"/><path d="M5.5 17a3.5 3.5 0 0 1 7 0m3-8h3m-3 4h3"/></symbol>
+        <symbol id="category-icon-other" viewBox="0 0 24 24"><path d="m3 7 9-4 9 4-9 4zM3 7v10l9 4 9-4V7M12 11v10"/></symbol>
+      </svg>
       <div class="category-grid">
-        <button type="button" class="category-option" onclick="selectCategory('Electronics', '📱')"><span>📱</span>Electronics</button>
-        <button type="button" class="category-option" onclick="selectCategory('Water Bottles/Tumblers', '🥤')"><span>🥤</span>Water Bottles / Tumblers</button>
-        <button type="button" class="category-option" onclick="selectCategory('Clothing & Accessories', '👕')"><span>👕</span>Clothing &amp; Accessories</button>
-        <button type="button" class="category-option" onclick="selectCategory('Books & Documents', '📚')"><span>📚</span>Books &amp; Documents</button>
-        <button type="button" class="category-option" onclick="selectCategory('Bags & Wallets', '🎒')"><span>🎒</span>Bags &amp; Wallets</button>
-        <button type="button" class="category-option" onclick="selectCategory('Keys', '🔑')"><span>🔑</span>Keys</button>
-        <button type="button" class="category-option" onclick="selectCategory('Jewelry', '💍')"><span>💍</span>Jewelry</button>
-        <button type="button" class="category-option" onclick="selectCategory('Sports Equipment', '⚽')"><span>⚽</span>Sports Equipment</button>
-        <button type="button" class="category-option" onclick="selectCategory('School Supplies', '✏️')"><span>✏️</span>School Supplies</button>
-        <button type="button" class="category-option" onclick="selectCategory('ID / Cards', '🪪')"><span>🪪</span>ID / Cards</button>
-        <button type="button" class="category-option" onclick="selectCategory('Others', '📦')"><span>📦</span>Others</button>
+        <button type="button" class="category-option" onclick="selectCategory('Electronics', 'electronics')"><svg aria-hidden="true"><use href="#category-icon-electronics"></use></svg>Electronics</button>
+        <button type="button" class="category-option" onclick="selectCategory('Water Bottles/Tumblers', 'bottle')"><svg aria-hidden="true"><use href="#category-icon-bottle"></use></svg>Water Bottles / Tumblers</button>
+        <button type="button" class="category-option" onclick="selectCategory('Clothing & Accessories', 'clothing')"><svg aria-hidden="true"><use href="#category-icon-clothing"></use></svg>Clothing &amp; Accessories</button>
+        <button type="button" class="category-option" onclick="selectCategory('Books & Documents', 'books')"><svg aria-hidden="true"><use href="#category-icon-books"></use></svg>Books &amp; Documents</button>
+        <button type="button" class="category-option" onclick="selectCategory('Bags & Wallets', 'bag')"><svg aria-hidden="true"><use href="#category-icon-bag"></use></svg>Bags &amp; Wallets</button>
+        <button type="button" class="category-option" onclick="selectCategory('Keys', 'key')"><svg aria-hidden="true"><use href="#category-icon-key"></use></svg>Keys</button>
+        <button type="button" class="category-option" onclick="selectCategory('Jewelry', 'jewelry')"><svg aria-hidden="true"><use href="#category-icon-jewelry"></use></svg>Jewelry</button>
+        <button type="button" class="category-option" onclick="selectCategory('Sports Equipment', 'sports')"><svg aria-hidden="true"><use href="#category-icon-sports"></use></svg>Sports Equipment</button>
+        <button type="button" class="category-option" onclick="selectCategory('School Supplies', 'school')"><svg aria-hidden="true"><use href="#category-icon-school"></use></svg>School Supplies</button>
+        <button type="button" class="category-option" onclick="selectCategory('ID / Cards', 'id')"><svg aria-hidden="true"><use href="#category-icon-id"></use></svg>ID / Cards</button>
+        <button type="button" class="category-option" onclick="selectCategory('Others', 'other')"><svg aria-hidden="true"><use href="#category-icon-other"></use></svg>Others</button>
       </div>
     </div>
   </div>
@@ -1123,8 +613,8 @@
         <div style="display: flex; align-items: center; gap: 0.5rem;">
           <span style="font-size: 1.3rem;">🔔</span>
           <div>
-            <h3 style="font-size: 1.1rem; font-weight: 800; color: #ffffff; margin: 0;">QR Recovery Alerts</h3>
-            <span style="font-size: 0.72rem; color: var(--text-muted);">Direct notifications from students who scanned your item QR stickers</span>
+            <h3 style="font-size: 1.1rem; font-weight: 800; color: #ffffff; margin: 0;">Account Notifications</h3>
+            <span style="font-size: 0.72rem; color: var(--text-muted);">Finder alerts and claim request updates</span>
           </div>
         </div>
         <button onclick="closeNotificationsModal()" style="background:none; border:none; color:var(--text-muted); font-size:1.3rem; cursor:pointer;">&times;</button>
@@ -1195,7 +685,7 @@
       <img src="cspc-logo.png" alt="CSPC Logo" style="width: 38px; height: 38px; object-fit: contain; border-radius: 50%; background: #ffffff; padding: 2px;" />
       <div>
         <p style="font-weight: 700; color: var(--text-main);">Camarines Sur Polytechnic Colleges</p>
-        <p>Lost &amp; Found Management System</p>
+        <p>Back2You</p>
       </div>
     </div>
     <div class="footer-right">
@@ -1371,8 +861,8 @@
             <div class="project-card" id="item-card-${item.id}" style="border-color: rgba(59,130,246,0.45); background: rgba(59,130,246,0.04);">
               <div class="project-card-header">
                 <div style="flex: 1;">
-                  <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 0.5rem;">
-                    <div>
+                  <div class="item-card-meta-row">
+                    <div class="item-card-category-ref">
                       <span class="project-type" style="color: #93c5fd;">${escapeHtml(item.category)}</span>
                       <span class="ref-code" style="margin-left: 0.4rem; color: #60a5fa;">${escapeHtml(item.refCode || '')}</span>
                     </div>
@@ -1386,7 +876,7 @@
                 🛡️ <strong>Preventive Protection Active:</strong> Paste QR sticker onto this item. If someone scans it, an anonymous notification goes straight to your account.
               </div>
 
-              <p style="margin-top: 0.25rem;">${escapeHtml(item.desc)}</p>
+              <p class="item-card-description" style="margin-top: 0.25rem;">${escapeHtml(item.desc)}</p>
 
               <div class="card-meta-line">
                 <span><strong>Primary Building:</strong> ${escapeHtml(item.location)}</span>
@@ -1449,8 +939,8 @@
           <div class="project-card" id="item-card-${item.id}">
             <div class="project-card-header">
               <div style="flex: 1;">
-                <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 0.5rem;">
-                  <div>
+                <div class="item-card-meta-row">
+                  <div class="item-card-category-ref">
                     <span class="project-type">${escapeHtml(item.category)}</span>
                     <span class="ref-code" style="margin-left: 0.4rem;">${escapeHtml(item.refCode || '')}</span>
                   </div>
@@ -1463,7 +953,7 @@
             ${matchBannerHtml}
             ${photoHtml}
 
-            <p style="margin-top: 0.25rem;">${escapeHtml(item.desc)}</p>
+            <p class="item-card-description" style="margin-top: 0.25rem;">${escapeHtml(item.desc)}</p>
 
             <div class="card-meta-line">
               <span><strong>Location:</strong> ${escapeHtml(item.location)}</span>
@@ -1541,8 +1031,15 @@
 
     function setFilter(filter, el) {
       currentFilter = filter;
-      document.querySelectorAll('.filter-chips .chip').forEach(c => c.classList.remove('active'));
-      el.classList.add('active');
+      currentPage = 1;
+      document.querySelectorAll('.filter-chips .chip').forEach(chip => {
+        chip.classList.toggle('active', chip.dataset.filter === filter);
+      });
+      document.querySelectorAll('.hero-stats .stat-box').forEach(stat => {
+        const active = stat.dataset.filter === filter;
+        stat.classList.toggle('active', active);
+        stat.setAttribute('aria-pressed', String(active));
+      });
       fetchAndRenderItems();
     }
 
@@ -1633,7 +1130,7 @@
       if (!activeCategoryField) return;
       document.getElementById(activeCategoryField).value = value;
       const picker = document.getElementById(`${activeCategoryField}Picker`);
-      picker.innerHTML = `<span class="category-picker-selected-icon">${icon}</span>${value}`;
+      picker.innerHTML = `<svg class="category-picker-selected-icon" aria-hidden="true"><use href="#category-icon-${icon}"></use></svg>${value}`;
       picker.classList.add('selected');
       closeCategoryPicker();
     }
@@ -1809,7 +1306,7 @@
           return;
         }
         if (!data.notifications.length) {
-          list.innerHTML = '<p style="text-align:center;color:#888;padding:24px;">No finder alerts yet. When someone scans your QR sticker, you\'ll see their message here.</p>';
+          list.innerHTML = '<p style="text-align:center;color:#888;padding:24px;">No account notifications yet.</p>';
           return;
         }
 
@@ -1819,11 +1316,13 @@
               <strong>🏷️ ${n.itemTitle || n.refCode}</strong>
               <span class="notif-time">${new Date(n.timestamp).toLocaleString()}</span>
             </div>
-            <p class="notif-msg">📍 <em>${n.locationFound || 'Location not specified'}</em></p>
-            <p class="notif-msg">💬 ${n.message}</p>
-            ${n.finderContact && n.finderContact !== 'Anonymous Student / Finder'
-              ? `<p class="notif-contact">📞 Finder left optional contact: ${n.finderContact}</p>`
-              : '<p class="notif-contact">🔒 Finder remained anonymous</p>'}
+            ${n.notificationType === 'claim'
+              ? `<p class="notif-msg">Claim request update</p><p class="notif-msg">${n.message}</p>`
+              : `<p class="notif-msg">📍 <em>${n.locationFound || 'Location not specified'}</em></p>
+                 <p class="notif-msg">💬 ${n.message}</p>
+                 ${n.finderContact && n.finderContact !== 'Anonymous Student / Finder'
+                   ? `<p class="notif-contact">📞 Finder left optional contact: ${n.finderContact}</p>`
+                   : '<p class="notif-contact">🔒 Finder remained anonymous</p>'}`}
             ${!n.read ? `<button class="btn-mark-read" onclick="markNotifRead('${n.id}', this)">Mark as read</button>` : ''}
           </div>
         `).join('');
@@ -2107,16 +1606,20 @@
       document.getElementById('claimModalSubtitle').innerText = 'Describe identifying details only the rightful owner would know. Only moderators can view your response.';
       document.getElementById('claimVerificationBox').style.display = 'none';
       document.getElementById('claimProofGroup').style.display = 'block';
+      document.getElementById('claimantDetailsGroup').style.display = 'block';
       document.querySelector('label[for="claimProofInput"]').textContent = 'Private ownership details';
       const proofInput = document.getElementById('claimProofInput');
       proofInput.value = '';
       proofInput.placeholder = 'Describe a mark, contents, or other private identifying detail';
+      document.getElementById('claimantCourseYearInput').value = currentUser.courseYear || currentUser.yearLevel || '';
+      document.getElementById('claimantContactInput').value = currentUser.phone || currentUser.contactNumber || '';
       document.getElementById('claimModalBtn').innerText = 'Submit Request';
       document.getElementById('claimConfirmModal').classList.add('open');
     }
 
     function closeClaimModal() {
       document.getElementById('claimConfirmModal').classList.remove('open');
+      document.getElementById('claimantDetailsGroup').style.display = 'none';
       targetClaimId = null;
       claimRequestMode = false;
     }
@@ -2126,8 +1629,14 @@
       const id = targetClaimId;
       const proof = document.getElementById('claimProofInput').value.trim();
       const isRequest = claimRequestMode;
+      const courseYear = isRequest ? document.getElementById('claimantCourseYearInput').value.trim() : '';
+      const contactNumber = isRequest ? document.getElementById('claimantContactInput').value.trim() : '';
       if (isRequest && (proof.length < 5 || proof.length > 500)) {
         showToast('Enter ownership details between 5 and 500 characters.', true);
+        return;
+      }
+      if (isRequest && !courseYear) {
+        showToast('Enter your course and year level.', true);
         return;
       }
       closeClaimModal();
@@ -2136,7 +1645,7 @@
         const response = await fetch(isRequest ? `/api/items/${id}/claim-requests` : `/api/items/${id}/claim`, {
           method: isRequest ? 'POST' : 'PATCH',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ proof })
+          body: JSON.stringify({ proof, courseYear, contactNumber })
         });
         const data = await response.json();
         if (!response.ok || !data.success) throw new Error(data.message || 'Unable to update item status.');
@@ -2238,5 +1747,6 @@
       }
     });
   </script>
+  <script src="/icons.js"></script>
 </body>
 </html>

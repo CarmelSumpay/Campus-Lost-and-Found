@@ -82,6 +82,10 @@ function saveItems(items) {
   fs.writeFileSync(ITEMS_FILE, JSON.stringify(items, null, 2), 'utf8');
 }
 
+function isItemClaimed(item) {
+  return Boolean(item.claimed || item.status === 'claimed');
+}
+
 function getClaims() {
   try {
     return JSON.parse(fs.readFileSync(CLAIMS_FILE, 'utf8'));
@@ -225,6 +229,15 @@ router.patch('/claims/:claimId', requireRole('admin'), (req, res) => {
     return res.status(400).json({ success: false, message: 'Claim status must be approved or rejected.' });
   }
 
+  const pickupInstructions = sanitizeString(req.body.pickupInstructions || '');
+  const rejectionReason = sanitizeString(req.body.rejectionReason || '');
+  if (pickupInstructions.length > 500) {
+    return res.status(400).json({ success: false, message: 'Pickup instructions must be 500 characters or fewer.' });
+  }
+  if (status === 'rejected' && (rejectionReason.length < 5 || rejectionReason.length > 500)) {
+    return res.status(400).json({ success: false, message: 'A rejection reason between 5 and 500 characters is required.' });
+  }
+
   const claims = getClaims();
   const claim = claims.find(entry => entry.id === req.params.claimId);
   if (!claim) return res.status(404).json({ success: false, message: 'Claim request not found.' });
@@ -241,6 +254,16 @@ router.patch('/claims/:claimId', requireRole('admin'), (req, res) => {
   claim.status = status;
   claim.reviewedAt = new Date().toISOString();
   claim.reviewedBy = req.session.user.id;
+  claim.pickupInstructions = status === 'approved' ? pickupInstructions : '';
+  claim.rejectionReason = status === 'rejected' ? rejectionReason : '';
+  claim.notification = {
+    id: `claim-notif-${crypto.randomUUID()}`,
+    timestamp: claim.reviewedAt,
+    read: false,
+    message: status === 'approved'
+      ? `Your claim for ${item.title} was approved.${pickupInstructions ? ` Pickup instructions: ${pickupInstructions}` : ''}`
+      : `Your claim for ${item.title} was not approved. Reason: ${rejectionReason}`
+  };
   if (status === 'approved') {
     item.claimed = true;
     item.status = 'claimed';
@@ -251,10 +274,21 @@ router.patch('/claims/:claimId', requireRole('admin'), (req, res) => {
         other.status = 'rejected';
         other.reviewedAt = claim.reviewedAt;
         other.reviewedBy = req.session.user.id;
+        other.rejectionReason = 'The item was approved for another claimant.';
+        other.notification = {
+          id: `claim-notif-${crypto.randomUUID()}`,
+          timestamp: claim.reviewedAt,
+          read: false,
+          message: `Your claim for ${item.title} was not approved because the item was awarded to another claimant.`
+        };
       }
     });
-    saveItems(items);
+  } else {
+    item.claimed = false;
+    item.status = 'active';
+    item.claimedAt = null;
   }
+  saveItems(items);
   saveClaims(claims);
 
   res.json({ success: true, message: `Claim request ${status}.`, claim });
@@ -278,14 +312,14 @@ router.get('/', (req, res) => {
 
   // Type filter: lost | found
   if (type && ['lost', 'found'].includes(type)) {
-    items = items.filter(i => i.type === type && !i.claimed);
+    items = items.filter(i => i.type === type && !isItemClaimed(i));
   }
 
   // Status filter: claimed | active
   if (status === 'claimed') {
-    items = items.filter(i => i.claimed);
+    items = items.filter(isItemClaimed);
   } else if (status === 'active') {
-    items = items.filter(i => !i.claimed);
+    items = items.filter(i => !isItemClaimed(i));
   }
 
   // Category filter
@@ -425,6 +459,15 @@ router.get('/my-notifications', requireAuth, (req, res) => {
     }
   });
 
+  getClaims().filter(claim => claim.claimantId === userId && claim.notification).forEach(claim => {
+    notifications.push({
+      ...claim.notification,
+      notificationType: 'claim',
+      itemTitle: claim.itemTitle,
+      refCode: claim.itemRefCode
+    });
+  });
+
   notifications.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
 
   res.json({
@@ -451,8 +494,17 @@ router.patch('/notifications/:notifId/read', requireAuth, (req, res) => {
     }
   });
 
+  const claims = getClaims();
+  claims.forEach(claim => {
+    if (claim.claimantId === userId && claim.notification?.id === notifId) {
+      claim.notification.read = true;
+      found = true;
+    }
+  });
+
   if (found) {
     saveItems(items);
+    saveClaims(claims);
     return res.json({ success: true, message: 'Notification marked as read.' });
   }
 
@@ -485,8 +537,13 @@ router.get('/:id', (req, res) => {
 
 router.post('/:id/claim-requests', requireAuth, (req, res) => {
   const proof = sanitizeString(req.body.proof || '');
+  const courseYear = sanitizeString(req.body.courseYear || req.session.user.courseYear || req.session.user.yearLevel || '');
+  const contactNumber = sanitizeString(req.body.contactNumber || req.session.user.phone || req.session.user.contactNumber || '');
   if (proof.length < 5 || proof.length > 500) {
     return res.status(400).json({ success: false, message: 'Ownership details must be between 5 and 500 characters.' });
+  }
+  if (courseYear.length > 100 || contactNumber.length > 50) {
+    return res.status(400).json({ success: false, message: 'Claimant contact details exceed the allowed length.' });
   }
 
   const items = getItems();
@@ -516,6 +573,10 @@ router.post('/:id/claim-requests', requireAuth, (req, res) => {
     claimantId: req.session.user.id,
     claimantName: req.session.user.fullName,
     claimantEmail: req.session.user.email,
+    claimantContact: contactNumber,
+    claimantStudentId: req.session.user.studentId || '',
+    claimantCourseYear: courseYear,
+    claimantDepartment: req.session.user.department || '',
     proof,
     status: 'pending',
     createdAt: new Date().toISOString()

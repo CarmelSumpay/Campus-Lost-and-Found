@@ -2,6 +2,8 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const os = require('node:os');
 const path = require('node:path');
+const { spawn } = require('node:child_process');
+const net = require('node:net');
 const test = require('node:test');
 const bcrypt = require('bcryptjs');
 
@@ -12,6 +14,10 @@ let createApp;
 
 const adminPassword = 'AdminPass1!';
 const studentPassword = 'StudentPass1!';
+const smtpEnvironmentKeys = ['SMTP_HOST', 'SMTP_PORT', 'SMTP_SECURE', 'SMTP_USER', 'SMTP_PASS', 'SMTP_FROM'];
+const originalSmtpEnvironment = Object.fromEntries(
+  smtpEnvironmentKeys.map(key => [key, process.env[key]])
+);
 
 function fixtureUser(id, email, password, role) {
   return {
@@ -54,6 +60,7 @@ test.before(async () => {
   process.env.DATA_DIR = dataDir;
   process.env.NODE_ENV = 'test';
   process.env.SESSION_SECRET = 'test-only-session-secret';
+  smtpEnvironmentKeys.forEach(key => delete process.env[key]);
 
   const users = [
     fixtureUser('admin-test', 'admin@cspc.edu.ph', adminPassword, 'admin'),
@@ -104,6 +111,41 @@ test.before(async () => {
       reportedBy: 'reporter-test',
       status: 'active',
       claimed: false
+    },
+    {
+      id: 14,
+      refCode: 'CSPC-LF-2026-014',
+      title: 'Found water bottle',
+      category: 'Others',
+      type: 'found',
+      location: 'Gymnasium',
+      desc: 'Blue bottle with a silver cap.',
+      verification: 'Small star scratched under the base',
+      reportedBy: 'reporter-test',
+      status: 'active',
+      claimed: false
+    },
+    {
+      id: 16,
+      refCode: 'CSPC-LF-2026-016',
+      title: 'Claimed found jacket',
+      category: 'Clothing',
+      type: 'found',
+      location: 'Cafeteria',
+      desc: 'A jacket already returned to its owner.',
+      status: 'active',
+      claimed: true
+    },
+    {
+      id: 15,
+      refCode: 'CSPC-LF-2026-015',
+      title: 'Claimed lost wallet',
+      category: 'Others',
+      type: 'lost',
+      location: 'Cafeteria',
+      desc: 'A wallet that has been returned to its owner.',
+      status: 'claimed',
+      claimed: false
     }
   ]));
 
@@ -118,7 +160,33 @@ test.after(async () => {
   fs.rmSync(dataDir, { recursive: true, force: true });
   delete process.env.DATA_DIR;
   delete process.env.SESSION_SECRET;
+  smtpEnvironmentKeys.forEach(key => {
+    if (originalSmtpEnvironment[key] === undefined) delete process.env[key];
+    else process.env[key] = originalSmtpEnvironment[key];
+  });
   process.env.NODE_ENV = 'development';
+});
+
+test('registration succeeds and reports when confirmation email SMTP is not configured', async () => {
+  const response = await fetch(`${baseUrl}/api/auth/register`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      fullName: 'New Student',
+      studentId: '1010011',
+      department: 'CCS',
+      email: 'new.student@my.cspc.edu.ph',
+      password: 'StudentPass1!'
+    })
+  });
+
+  assert.equal(response.status, 201);
+  const result = await response.json();
+  assert.equal(result.success, true);
+  assert.equal(result.emailSent, false);
+  assert.match(result.message, /confirmation email could not be sent/i);
+  const users = JSON.parse(fs.readFileSync(path.join(dataDir, 'users.json'), 'utf8'));
+  assert.ok(users.some(user => user.email === 'new.student@my.cspc.edu.ph'));
 });
 
 test('public item responses exclude private fields', async () => {
@@ -130,10 +198,25 @@ test('public item responses exclude private fields', async () => {
   const response = await fetch(`${baseUrl}/api/items`);
   assert.equal(response.status, 200);
   const { items } = await response.json();
-  assert.equal(items.length, 2);
+  assert.equal(items.length, 5);
   for (const field of ['contact', 'verification', 'claimantProof', 'reportedBy', 'notifications', 'ownerEmail']) {
     assert.equal(Object.hasOwn(items[0], field), false, `public response should omit ${field}`);
   }
+});
+
+test('claimed items are excluded from lost and found results and included in claimed results', async () => {
+  const lostResponse = await fetch(`${baseUrl}/api/items?type=lost`);
+  assert.equal(lostResponse.status, 200);
+  assert.deepEqual((await lostResponse.json()).items, []);
+
+  const foundResponse = await fetch(`${baseUrl}/api/items?type=found`);
+  assert.equal(foundResponse.status, 200);
+  assert.deepEqual((await foundResponse.json()).items.map(item => item.id), [11, 13, 14]);
+
+  const claimedResponse = await fetch(`${baseUrl}/api/items?status=claimed`);
+  assert.equal(claimedResponse.status, 200);
+  const claimedItems = (await claimedResponse.json()).items;
+  assert.deepEqual(claimedItems.map(item => item.id).sort((a, b) => a - b), [15, 16]);
 });
 
 test('registered belongings are private except through QR reference lookup', async () => {
@@ -185,7 +268,11 @@ test('claim requests are private and require moderator review', async () => {
   const requestResponse = await fetch(`${baseUrl}/api/items/13/claim-requests`, {
     method: 'POST',
     headers: { Cookie: studentCookie, 'Content-Type': 'application/json' },
-    body: JSON.stringify({ proof: 'A small university logo is on the inside cover.' })
+    body: JSON.stringify({
+      proof: 'A small university logo is on the inside cover.',
+      courseYear: 'BS Information Technology, 3rd Year',
+      contactNumber: '09171234567'
+    })
   });
   assert.equal(requestResponse.status, 201);
   const requestData = await requestResponse.json();
@@ -207,16 +294,67 @@ test('claim requests are private and require moderator review', async () => {
   const { claims } = await adminClaimsResponse.json();
   assert.equal(claims.length, 1);
   assert.match(claims[0].proof, /university logo/);
+  assert.equal(claims[0].claimantStudentId, '2026001');
+  assert.equal(claims[0].claimantCourseYear, 'BS Information Technology, 3rd Year');
+  assert.equal(claims[0].claimantContact, '09171234567');
 
   const reviewResponse = await fetch(`${baseUrl}/api/items/claims/${encodeURIComponent(claims[0].id)}`, {
     method: 'PATCH',
     headers: { Cookie: adminCookie, 'Content-Type': 'application/json' },
-    body: JSON.stringify({ status: 'approved' })
+    body: JSON.stringify({ status: 'approved', pickupInstructions: 'Present your CSPC Student ID at SAS Office, Room 101.' })
   });
   assert.equal(reviewResponse.status, 200);
+  assert.equal((await reviewResponse.json()).claim.pickupInstructions, 'Present your CSPC Student ID at SAS Office, Room 101.');
 
   const itemResponse = await fetch(`${baseUrl}/api/items/13`);
   assert.equal((await itemResponse.json()).item.claimed, true);
+
+  const notificationsResponse = await fetch(`${baseUrl}/api/items/my-notifications`, { headers: { Cookie: studentCookie } });
+  const { notifications } = await notificationsResponse.json();
+  assert.equal(notifications[0].notificationType, 'claim');
+  assert.match(notifications[0].message, /Room 101/);
+
+  const readResponse = await fetch(`${baseUrl}/api/items/notifications/${encodeURIComponent(notifications[0].id)}/read`, {
+    method: 'PATCH',
+    headers: { Cookie: studentCookie }
+  });
+  assert.equal(readResponse.status, 200);
+  const readNotificationsResponse = await fetch(`${baseUrl}/api/items/my-notifications`, { headers: { Cookie: studentCookie } });
+  assert.equal((await readNotificationsResponse.json()).unreadCount, 0);
+});
+
+test('rejected claims restore availability and notify the claimant', async () => {
+  const studentCookie = await login('student@my.cspc.edu.ph', studentPassword);
+  const claimResponse = await fetch(`${baseUrl}/api/items/14/claim-requests`, {
+    method: 'POST',
+    headers: { Cookie: studentCookie, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ proof: 'A small star is scratched under the base.' })
+  });
+  assert.equal(claimResponse.status, 201);
+
+  const adminCookie = await login('admin@cspc.edu.ph', adminPassword);
+  const claimsResponse = await fetch(`${baseUrl}/api/items/claims`, { headers: { Cookie: adminCookie } });
+  const { claims } = await claimsResponse.json();
+  const claim = claims.find(entry => String(entry.itemId) === '14');
+  assert.ok(claim);
+
+  const reviewResponse = await fetch(`${baseUrl}/api/items/claims/${encodeURIComponent(claim.id)}`, {
+    method: 'PATCH',
+    headers: { Cookie: adminCookie, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ status: 'rejected', rejectionReason: 'The proof does not match the item.' })
+  });
+  assert.equal(reviewResponse.status, 200);
+  assert.equal((await reviewResponse.json()).claim.rejectionReason, 'The proof does not match the item.');
+
+  const itemResponse = await fetch(`${baseUrl}/api/items/14`);
+  const { item } = await itemResponse.json();
+  assert.equal(item.status, 'active');
+  assert.equal(item.claimed, false);
+
+  const notificationsResponse = await fetch(`${baseUrl}/api/items/my-notifications`, { headers: { Cookie: studentCookie } });
+  const { notifications } = await notificationsResponse.json();
+  assert.equal(notifications[0].notificationType, 'claim');
+  assert.match(notifications[0].message, /does not match/);
 });
 
 test('image upload stores a bounded image file and rejects invalid uploads', async () => {
@@ -270,5 +408,60 @@ test('production requires a secret and persists secure sessions', async () => {
     await new Promise((resolve, reject) => productionServer.close(error => error ? reject(error) : resolve()));
     process.env.NODE_ENV = 'test';
     process.env.SESSION_SECRET = 'test-only-session-secret';
+  }
+});
+
+test('production server starts when loaded as a hosting entry module', async () => {
+  const bootDataDir = fs.mkdtempSync(path.join(os.tmpdir(), 'cspc-lostfound-boot-'));
+  const portProbe = net.createServer();
+  await new Promise((resolve, reject) => {
+    portProbe.once('error', reject);
+    portProbe.listen(0, '127.0.0.1', resolve);
+  });
+  const port = portProbe.address().port;
+  await new Promise((resolve, reject) => portProbe.close(error => error ? reject(error) : resolve()));
+
+  const child = spawn(process.execPath, ['-e', "require('./server')"], {
+    cwd: path.join(__dirname, '..'),
+    env: {
+      ...process.env,
+      DATA_DIR: bootDataDir,
+      NODE_ENV: 'production',
+      PORT: String(port),
+      SESSION_SECRET: 'test-module-start-secret'
+    },
+    stdio: ['ignore', 'pipe', 'pipe']
+  });
+  let logs = '';
+  const startup = new Promise((resolve, reject) => {
+    const timeout = setTimeout(() => reject(new Error(`Server did not start. Logs: ${logs}`)), 3500);
+    child.stdout.on('data', chunk => {
+      logs += chunk.toString();
+      if (logs.includes('Server running')) {
+        clearTimeout(timeout);
+        resolve();
+      }
+    });
+    child.stderr.on('data', chunk => { logs += chunk.toString(); });
+    child.once('error', error => {
+      clearTimeout(timeout);
+      reject(error);
+    });
+    child.once('exit', code => {
+      clearTimeout(timeout);
+      reject(new Error(`Server exited with code ${code}. Logs: ${logs}`));
+    });
+  });
+
+  try {
+    await startup;
+    const response = await fetch(`http://127.0.0.1:${port}/api/items`);
+    assert.equal(response.status, 200);
+  } finally {
+    if (child.exitCode === null) {
+      child.kill();
+      await new Promise(resolve => child.once('exit', resolve));
+    }
+    fs.rmSync(bootDataDir, { recursive: true, force: true });
   }
 });
