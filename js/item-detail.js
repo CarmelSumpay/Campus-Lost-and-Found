@@ -22,7 +22,7 @@ let currentItem = null;
     });
 
     function renderDetail(item) {
-      document.title = `CSPC Lost & Found — ${item.title}`;
+      document.title = 'Back2You';
       document.getElementById('breadcrumbTitle').textContent = item.title;
 
       const dateLabel   = item.type === 'lost'
